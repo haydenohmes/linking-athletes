@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ChevronDown, ChevronRight, ChevronUp, ArrowLeft, Filter, Send, Check, GripVertical, X, LayoutGrid, List, ArrowUpDown, ArrowRight } from 'lucide-react'
@@ -444,6 +444,7 @@ export default function AssignAthletesPage() {
   const availableAthletes = initialAthletes.filter((athlete) => !assignedAthleteIds.has(athlete.id))
 
   const [athleteSearchQuery, setAthleteSearchQuery] = useState("")
+  const [teamSearchQuery, setTeamSearchQuery] = useState("")
 
   const searchedAthletes =
     !selectedProgram || selectedRegistration.size === 0
@@ -623,8 +624,60 @@ export default function AssignAthletesPage() {
 
   const filteredTeams = teams.filter((team) => {
     if (selectedSeasons.size === 0) return false
-    return selectedSeasons.has(team.name)
+    const matchesSeason = selectedSeasons.has(team.name)
+    
+    if (teamSearchQuery === "") {
+      return matchesSeason
+    }
+    
+    const searchLower = teamSearchQuery.toLowerCase()
+    const matchesTeamName = team.name.toLowerCase().includes(searchLower)
+    
+    // Check if any assigned athlete matches the search
+    const teamSlots = teamAssignments[team.id] || {}
+    const assignedAthleteIds = Object.values(teamSlots)
+    const matchesAthlete = assignedAthleteIds.some((athleteId) => {
+      const athlete = initialAthletes.find((a) => a.id === athleteId)
+      return athlete && athlete.name.toLowerCase().includes(searchLower)
+    })
+    
+    return matchesSeason && (matchesTeamName || matchesAthlete)
   })
+
+  // Auto-expand teams when search matches an athlete in a collapsed team
+  useEffect(() => {
+    if (teamSearchQuery === "") return
+
+    const searchLower = teamSearchQuery.toLowerCase()
+    const teamsToExpand = new Set<string>()
+
+    // Check all teams that match the season filter
+    teams
+      .filter((team) => selectedSeasons.has(team.name))
+      .forEach((team) => {
+        // Check if team has an athlete matching the search
+        const teamSlots = teamAssignments[team.id] || {}
+        const assignedAthleteIds = Object.values(teamSlots)
+        const hasMatchingAthlete = assignedAthleteIds.some((athleteId) => {
+          const athlete = initialAthletes.find((a) => a.id === athleteId)
+          return athlete && athlete.name.toLowerCase().includes(searchLower)
+        })
+
+        // If athlete matches and team is collapsed, expand it
+        if (hasMatchingAthlete && !expandedTeams.has(team.id)) {
+          teamsToExpand.add(team.id)
+        }
+      })
+
+    // Expand all matching teams at once
+    if (teamsToExpand.size > 0) {
+      setExpandedTeams((prev) => {
+        const newExpanded = new Set(prev)
+        teamsToExpand.forEach((teamId) => newExpanded.add(teamId))
+        return newExpanded
+      })
+    }
+  }, [teamSearchQuery, teamAssignments, selectedSeasons, expandedTeams])
 
   // COMBINED selection states for drag operations
   const selectedAthletes = new Set([...mainContentSelectedAthletes, ...sidebarSelectedAthletes])
@@ -929,6 +982,8 @@ export default function AssignAthletesPage() {
                 <Input
                   type="text"
                   placeholder="Search for..."
+                  value={teamSearchQuery}
+                  onChange={(e) => setTeamSearchQuery(e.target.value)}
                   className="flex-1 border-border text-foreground placeholder:text-muted-foreground rounded"
                 />
                 <div className="flex items-center bg-card border border-border rounded p-1 py-0.5">
