@@ -9,6 +9,7 @@ import { ChevronDown, ChevronRight, ChevronUp, ArrowLeft, Filter, Send, Check, G
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog" // Added Dialog components
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type AthleteStatus = "Assigned" | "Invited" | "Accepted" | "Rostered" | "Declined" | null
 
@@ -860,18 +861,18 @@ export default function AssignAthletesPage() {
       <header className="py-2.5" style={{ backgroundColor: 'var(--u-color-base-background)' }}>
         <div className="max-w-[1600px] mx-auto px-4">
           <div className="flex items-center justify-between">
-            <Button variant="ghost" size="icon" className="text-foreground rounded">
+            <Button variant="ghost" size="icon" className="text-foreground">
               <ArrowLeft className="h-5 w-5" />
             </Button>
 
             <h1 className="text-foreground font-semibold text-lg">Assign Athletes</h1>
 
             <div className="flex items-center gap-3">
-              <Button onClick={() => setInviteModalOpen(true)} className="bg-muted-foreground hover:bg-foreground text-primary-foreground gap-2 rounded">
+              <Button onClick={() => setInviteModalOpen(true)} className="bg-muted-foreground hover:bg-foreground text-primary-foreground gap-2">
                 <Send className="h-4 w-4" />
                 Send Invitations
               </Button>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded">Save</Button>
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">Save</Button>
             </div>
           </div>
         </div>
@@ -1198,20 +1199,18 @@ export default function AssignAthletesPage() {
               </div>
 
               <div className="space-y-3 mb-4">
-                <div>
-                  <select
-                    value={selectedProgram}
-                    onChange={(e) => setSelectedProgram(e.target.value)}
-                    className="w-full pl-3 pr-8 py-2 border border-border rounded text-foreground text-sm bg-card focus:outline-none focus:ring-2 focus:ring-[var(--u-color-emphasis-background-contrast)] focus:border-transparent"
-                  >
-                    <option value="">Program</option>
+                <Select value={selectedProgram} onValueChange={setSelectedProgram}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Program" />
+                  </SelectTrigger>
+                  <SelectContent>
                     {programOptions.map((program) => (
-                      <option key={program} value={program}>
+                      <SelectItem key={program} value={program}>
                         {program}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
-                </div>
+                  </SelectContent>
+                </Select>
 
                 <div>
                   <Popover>

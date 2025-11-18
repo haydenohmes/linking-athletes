@@ -2,6 +2,8 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Barlow, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+// Import only the design tokens - skip index.css (has global reset) and uniform-design-system.css (remote import)
+import "@adam-porter/shared-uniform-styles/src/uniform-design-tokens.css"
 import "./globals.css"
 
 const _barlow = Barlow({

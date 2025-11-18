@@ -4,58 +4,14 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Uniform Web Design Tokens - Typography */
-  --u-font-body: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  --u-font-heading: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  --u-font-weight-regular: 400;
-  --u-font-weight-medium: 500;
-  --u-font-weight-semibold: 600;
-  --u-font-weight-bold: 700;
-  --u-font-size-micro: 12px;
-  --u-font-size-small: 14px;
-  --u-font-size-default: 16px;
-  --u-font-size-large: 20px;
-  --u-font-size-xlarge: 20px;
-
-  /* Uniform Web Design Tokens - Colors */
-  --u-color-alert-background: #fff4f0;
-  --u-color-alert-foreground: #bb1700;
-  --u-color-background-container: #fefefe;
-  --u-color-background-default: #ffffff;
-  --u-color-base-background: #e0e1e1;
-  --u-color-base-foreground: #36485c;
-  --u-color-base-foreground-contrast: #071c31;
-  --u-color-base-foreground-subtle: #607081;
-  --u-color-emphasis-background-contrast: #0273e3;
-  --u-color-emphasis-foreground-reversed: #fefefe;
-  --u-color-line-default: #a7aeb5;
-  --u-color-line-subtle: #c4c6c8;
-  --u-color-success-foreground: #2e7d32;
-
-  /* Uniform Web Design Tokens - Spacing */
-  --u-space-zero: 0;
-  --u-space-eighth: 2px;
-  --u-space-quarter: 4px;
-  --u-space-half: 8px;
-  --u-space-three-quarter: 12px;
-  --u-space-one: 16px;
-  --u-space-one-and-half: 24px;
-  --u-space-one-half: 24px;
-  --u-space-two: 32px;
-  --u-space-three: 48px;
-  --u-space-four: 64px;
-
-  /* Uniform Web Design Tokens - Border Radius */
-  --u-border-radius-small: 2px;
-  --u-border-radius-medium: 4px;
-  --u-border-radius-large: 8px;
-
-  /* Shadcn/UI compatibility - mapped to Uniform Web tokens */
-  --background: var(--u-color-background-default);
+  /* Shadcn/UI compatibility - mapped to Uniform Web tokens from shared package */
+  /* Design tokens are now provided by @adam-porter/shared-uniform-styles */
+  /* Using background-popover for main background (white) instead of background-default (gray) */
+  --background: var(--u-color-background-popover, #ffffff);
   --foreground: var(--u-color-base-foreground-contrast);
   --card: var(--u-color-background-container);
   --card-foreground: var(--u-color-base-foreground-contrast);
-  --popover: var(--u-color-background-default);
+  --popover: var(--u-color-background-popover, #ffffff);
   --popover-foreground: var(--u-color-base-foreground-contrast);
   --primary: var(--u-color-emphasis-background-contrast);
   --primary-foreground: var(--u-color-emphasis-foreground-reversed);
@@ -166,5 +122,88 @@
     font-family: var(--u-font-body);
     font-size: var(--u-font-size-default);
     line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Ensure buttons use proper border radius from tokens */
+  button {
+    border-radius: var(--u-border-radius-medium);
+  }
+  
+  /* Input and form elements use proper styling */
+  input, select, textarea {
+    font-family: var(--u-font-body);
+    font-size: var(--u-font-size-default);
+  }
+  
+  /* Remove default select styling and apply Uniform Web styles */
+  select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: none !important;
+  }
+  
+  /* Ensure consistent border radius for cards and containers */
+  .rounded {
+    border-radius: var(--u-border-radius-medium);
+  }
+  
+  /* Uniform Web button border radius - override any rounded classes on buttons */
+  button {
+    border-radius: 2px !important;
+  }
+  
+  /* Uniform Web select styling - override Tailwind classes */
+  select {
+    border: 1px solid var(--u-color-line-subtle) !important;
+    border-radius: 2px !important;
+    padding: var(--u-space-half) var(--u-space-three-quarter) !important;
+    font-size: var(--u-font-size-default) !important;
+    color: var(--u-color-base-foreground-contrast) !important;
+    background-color: var(--u-color-background-container) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    font-family: var(--u-font-body) !important;
+    height: 40px !important;
+    min-height: 40px !important;
+  }
+  
+  select:focus {
+    outline: none !important;
+    border-color: var(--u-color-emphasis-background-contrast) !important;
+    box-shadow: 0 0 0 2px rgba(2, 115, 227, 0.1) !important;
+  }
+  
+  select:disabled {
+    background-color: var(--u-color-base-background) !important;
+    color: var(--u-color-base-foreground-subtle) !important;
+    cursor: not-allowed !important;
+  }
+  
+  /* Uniform Web input styling */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"] {
+    border: 1px solid var(--u-color-line-subtle) !important;
+    border-radius: var(--u-border-radius-small) !important;
+    font-size: var(--u-font-size-default) !important;
+    color: var(--u-color-base-foreground-contrast) !important;
+    background-color: var(--u-color-background-container) !important;
+    font-family: var(--u-font-body) !important;
+    height: 40px !important;
+    min-height: 40px !important;
+  }
+  
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="search"]:focus {
+    outline: none !important;
+    border-color: var(--u-color-emphasis-background-contrast) !important;
+    box-shadow: 0 0 0 2px rgba(2, 115, 227, 0.1) !important;
   }
 }
