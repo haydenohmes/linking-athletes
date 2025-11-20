@@ -6,8 +6,21 @@ function Textarea({ className, ...props }: React.ComponentProps<'textarea'>) {
   return (
     <textarea
       data-slot="textarea"
+      style={{
+        border: '1px solid var(--u-color-line-subtle)',
+        borderRadius: 'var(--u-border-radius-small)',
+        padding: 'var(--u-space-half) var(--u-space-three-quarter)',
+        fontSize: 'var(--u-font-size-default)',
+        color: 'var(--u-color-base-foreground-contrast)',
+        backgroundColor: 'var(--u-color-background-container)',
+        fontFamily: 'var(--u-font-body)',
+      }}
       className={cn(
-        'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
+        'placeholder:text-muted-foreground w-full min-h-16 outline-none resize-none',
+        'transition-[border-color,box-shadow]',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        'focus-visible:border-[var(--u-color-emphasis-background-contrast)] focus-visible:shadow-[0_0_0_2px_rgba(2,115,227,0.1)]',
+        'aria-invalid:ring-destructive/20 aria-invalid:border-destructive',
         className,
       )}
       {...props}

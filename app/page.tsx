@@ -3,8 +3,10 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { ChevronDown, ChevronRight, ChevronUp, ArrowLeft, Filter, Send, Check, GripVertical, X, LayoutGrid, List, ArrowUpDown, ArrowRight } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog" // Added Dialog components
@@ -40,10 +42,13 @@ const teams = [
 ]
 
 const registrationOptions = [
-  "2025-2026 Volleyball Registration",
-  "2025-2026 Fall Registration",
-  "2025-2026 Winter Registration",
-  "2025-2026 Spring Registration",
+  "U13",
+  "U14",
+  "U15",
+  "U16",
+  "U17",
+  "U18",
+  "U19",
 ]
 
 // Helper function to assign registrations to athletes
@@ -306,6 +311,61 @@ const initialAthletesData: Omit<Athlete, 'registrations'>[] = [
     status: null,
     birthdate: "11/12/2009",
   },
+  { id: "76", name: "Luna Peterson", initials: "LP", position: "Setter", status: null, birthdate: "01/29/2010" },
+  { id: "77", name: "Nova Gray", initials: "NG", position: "Outside Hitter", status: null, birthdate: "07/16/2010" },
+  { id: "78", name: "Aria Ramirez", initials: "AR", position: "Middle Blocker", status: "Invited", birthdate: "09/03/2009" },
+  { id: "79", name: "Iris James", initials: "IJ", position: "Libero", status: null, birthdate: "04/20/2011" },
+  { id: "80", name: "Jade Watson", initials: "JW", position: "Opposite", status: null, birthdate: "12/08/2009" },
+  { id: "81", name: "Rose Brooks", initials: "RB", position: "Outside Hitter", status: null, birthdate: "02/25/2010" },
+  { id: "82", name: "Lily Kelly", initials: "LK", position: "Setter", status: null, birthdate: "08/12/2010" },
+  { id: "83", name: "Violet Sanders", initials: "VS", position: "Middle Blocker", status: null, birthdate: "10/29/2009" },
+  { id: "84", name: "Daisy Price", initials: "DP", position: "Right Side", status: null, birthdate: "05/16/2010" },
+  { id: "85", name: "Ivy Bennett", initials: "IB", position: "Outside Hitter", status: null, birthdate: "07/03/2011" },
+  { id: "86", name: "Poppy Wood", initials: "PW", position: "Libero", status: "Invited", birthdate: "03/11/2010" },
+  { id: "87", name: "Marigold Barnes", initials: "MB", position: "Opposite", status: null, birthdate: "11/18/2009" },
+  { id: "88", name: "Sage Ross", initials: "SR", position: "Setter", status: null, birthdate: "01/05/2010" },
+  { id: "89", name: "Juniper Henderson", initials: "JH", position: "Middle Blocker", status: null, birthdate: "06/22/2010" },
+  { id: "90", name: "Willow Coleman", initials: "WC", position: "Defensive Specialist", status: null, birthdate: "09/09/2009" },
+  { id: "91", name: "Aspen Jenkins", initials: "AJ", position: "Outside Hitter", status: null, birthdate: "04/26/2011" },
+  { id: "92", name: "River Perry", initials: "RP", position: "Right Side", status: null, birthdate: "12/13/2009" },
+  { id: "93", name: "Ocean Powell", initials: "OP", position: "Libero", status: null, birthdate: "02/01/2010" },
+  { id: "94", name: "Sky Long", initials: "SL", position: "Setter", status: "Invited", birthdate: "08/18/2010" },
+  { id: "95", name: "Storm Patterson", initials: "SP", position: "Middle Blocker", status: null, birthdate: "10/05/2009" },
+  { id: "96", name: "Rain Hughes", initials: "RH", position: "Outside Hitter", status: null, birthdate: "05/23/2010" },
+  { id: "97", name: "Sunny Flores", initials: "SF", position: "Opposite", status: null, birthdate: "07/10/2011" },
+  { id: "98", name: "Breeze Washington", initials: "BW", position: "Libero", status: null, birthdate: "03/18/2010" },
+  { id: "99", name: "Crystal Butler", initials: "CB", position: "Setter", status: null, birthdate: "11/25/2009" },
+  { id: "100", name: "Diamond Simmons", initials: "DS", position: "Middle Blocker", status: null, birthdate: "01/12/2010" },
+  { id: "101", name: "Pearl Foster", initials: "PF", position: "Outside Hitter", status: null, birthdate: "06/29/2010" },
+  { id: "102", name: "Amber Gonzales", initials: "AG", position: "Right Side", status: "Invited", birthdate: "09/16/2009" },
+  { id: "103", name: "Ruby Bryant", initials: "RB", position: "Libero", status: null, birthdate: "04/03/2011" },
+  { id: "104", name: "Emerald Alexander", initials: "EA", position: "Defensive Specialist", status: null, birthdate: "12/20/2009" },
+  { id: "105", name: "Sapphire Russell", initials: "SR", position: "Setter", status: null, birthdate: "02/07/2010" },
+  { id: "106", name: "Opal Griffin", initials: "OG", position: "Middle Blocker", status: null, birthdate: "08/24/2010" },
+  { id: "107", name: "Topaz Diaz", initials: "TD", position: "Outside Hitter", status: null, birthdate: "10/11/2009" },
+  { id: "108", name: "Jade Hayes", initials: "JH", position: "Opposite", status: null, birthdate: "05/28/2010" },
+  { id: "109", name: "Quinn Myers", initials: "QM", position: "Libero", status: null, birthdate: "07/15/2011" },
+  { id: "110", name: "Rowan Ford", initials: "RF", position: "Setter", status: "Invited", birthdate: "03/22/2010" },
+  { id: "111", name: "River Hamilton", initials: "RH", position: "Middle Blocker", status: null, birthdate: "11/29/2009" },
+  { id: "112", name: "Phoenix Graham", initials: "PG", position: "Outside Hitter", status: null, birthdate: "01/16/2010" },
+  { id: "113", name: "Sage Sullivan", initials: "SS", position: "Right Side", status: null, birthdate: "07/02/2010" },
+  { id: "114", name: "Cedar Wallace", initials: "CW", position: "Libero", status: null, birthdate: "09/19/2009" },
+  { id: "115", name: "Ash Woods", initials: "AW", position: "Defensive Specialist", status: null, birthdate: "04/06/2011" },
+  { id: "116", name: "Maple Cole", initials: "MC", position: "Setter", status: null, birthdate: "12/23/2009" },
+  { id: "117", name: "Birch West", initials: "BW", position: "Middle Blocker", status: null, birthdate: "02/10/2010" },
+  { id: "118", name: "Oak Jordan", initials: "OJ", position: "Outside Hitter", status: "Invited", birthdate: "08/27/2010" },
+  { id: "119", name: "Pine Owens", initials: "PO", position: "Opposite", status: null, birthdate: "10/14/2009" },
+  { id: "120", name: "Elm Reynolds", initials: "ER", position: "Libero", status: null, birthdate: "05/31/2010" },
+  { id: "121", name: "Cypress Fisher", initials: "CF", position: "Setter", status: null, birthdate: "07/18/2011" },
+  { id: "122", name: "Spruce Ellis", initials: "SE", position: "Middle Blocker", status: null, birthdate: "03/25/2010" },
+  { id: "123", name: "Fir Harrison", initials: "FH", position: "Outside Hitter", status: null, birthdate: "11/01/2009" },
+  { id: "124", name: "Hemlock Gibson", initials: "HG", position: "Right Side", status: null, birthdate: "01/19/2010" },
+  { id: "125", name: "Redwood Mcdonald", initials: "RM", position: "Libero", status: "Invited", birthdate: "06/05/2010" },
+  { id: "126", name: "Sequoia Cruz", initials: "SC", position: "Defensive Specialist", status: null, birthdate: "09/12/2009" },
+  { id: "127", name: "Cedar Marshall", initials: "CM", position: "Setter", status: null, birthdate: "04/29/2011" },
+  { id: "128", name: "Pine Ortiz", initials: "PO", position: "Middle Blocker", status: null, birthdate: "12/16/2009" },
+  { id: "129", name: "Fir Gomez", initials: "FG", position: "Outside Hitter", status: null, birthdate: "02/03/2010" },
+  { id: "130", name: "Spruce Murray", initials: "SM", position: "Opposite", status: null, birthdate: "08/20/2010" },
 ]
 
 // Create initialAthletes with registrations assigned
@@ -335,6 +395,7 @@ const getStatusBadgeStyle = (status: AthleteStatus) => {
 }
 
 export default function AssignAthletesPage() {
+  const router = useRouter()
   const [seasonExpanded, setSeasonExpanded] = useState(true)
   const [season2025Expanded, setSeason2025Expanded] = useState(true)
   const [maleExpanded, setMaleExpanded] = useState(true)
@@ -372,9 +433,12 @@ export default function AssignAthletesPage() {
   const [selectedAthleteFilterGender, setSelectedAthleteFilterGender] = useState<string | null>(null)
 
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
+  const [inviteModalStep, setInviteModalStep] = useState<"teams" | "email">("teams")
   const [selectedTeamsForInvite, setSelectedTeamsForInvite] = useState<Set<string>>(
     new Set(teams.slice(0, 5).map((t) => t.id)),
   )
+  const [emailSubject, setEmailSubject] = useState("")
+  const [emailBody, setEmailBody] = useState("")
 
   const [selectedProgram, setSelectedProgram] = useState<string>("")
   const [selectedRegistration, setSelectedRegistration] = useState<Set<string>>(new Set())
@@ -396,10 +460,10 @@ export default function AssignAthletesPage() {
   ]
 
   const programOptions = [
-    "2025-2026 Open Gym (Aug 1 - May 31)",
-    "2025-2026 Fall Open Gym (Sept 15 - Nov 30)",
-    "2025-2026 Winter Open Gym (Dec 1 - Feb 28)",
-    "2025-2026 Open Gym Fall (Sept 1 - Nov 15)",
+    "2025-2026 Tryouts (Aug 1 - May 31)",
+    "2025-2026 Fall Tryouts (Sept 15 - Nov 30)",
+    "2025-2026 Winter Tryouts (Dec 1 - Feb 28)",
+    "2025-2026 Spring Tryouts (Mar 1 - May 15)",
   ]
 
   const ageOptions = ["10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"]
@@ -424,18 +488,18 @@ export default function AssignAthletesPage() {
     const athleteIds = Object.values(slots)
 
     const stats = {
+      accepted: 0,
       rostered: 0,
       assigned: 0,
       invited: 0,
-      declined: 0,
     }
 
     athleteIds.forEach((athleteId) => {
-      const status = athleteStatuses[athleteId]
-      if (status === "Rostered") stats.rostered++
+      const status = athleteStatuses[athleteId] || "Assigned"
+      if (status === "Accepted") stats.accepted++
+      else if (status === "Rostered") stats.rostered++
       else if (status === "Assigned") stats.assigned++
       else if (status === "Invited") stats.invited++
-      else if (status === "Declined") stats.declined++
     })
 
     return stats
@@ -872,7 +936,12 @@ export default function AssignAthletesPage() {
                 <Send className="h-4 w-4" />
                 Send Invitations
               </Button>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">Save</Button>
+              <Button 
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                onClick={() => router.push('/teams')}
+              >
+                Save
+              </Button>
             </div>
           </div>
         </div>
@@ -1043,6 +1112,9 @@ export default function AssignAthletesPage() {
                               <h3 className="text-card-foreground font-semibold mb-2">{team.name}</h3>
                               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                 <span>
+                                  Accepted <span className="font-bold">{stats.accepted}</span>
+                                </span>
+                                <span>
                                   Rostered <span className="font-bold">{stats.rostered}</span>
                                 </span>
                                 <span>
@@ -1050,9 +1122,6 @@ export default function AssignAthletesPage() {
                                 </span>
                                 <span>
                                   Invited <span className="font-bold">{stats.invited}</span>
-                                </span>
-                                <span>
-                                  Declined <span className="font-bold">{stats.declined}</span>
                                 </span>
                               </div>
                             </div>
@@ -1087,7 +1156,7 @@ export default function AssignAthletesPage() {
                                   : null
                                 const isDropTarget =
                                   dragOverSlot?.teamId === team.id && dragOverSlot?.slotIndex === slotIndex
-                                const athleteStatus = assignedAthleteId ? athleteStatuses[assignedAthleteId] : null
+                                const athleteStatus = assignedAthleteId ? (athleteStatuses[assignedAthleteId] || "Assigned") : null
                                 const statusStyle = athleteStatus ? getStatusBadgeStyle(athleteStatus) : null
 
                                 return (
@@ -1136,11 +1205,41 @@ export default function AssignAthletesPage() {
                                           </div>
                                         </div>
                                         {statusStyle && athleteStatus && (
-                                          <span
-                                            className={`${statusStyle.bg} ${statusStyle.text} text-sm px-3 py-1 rounded font-medium`}
-                                          >
-                                            {athleteStatus}
-                                          </span>
+                                          <Popover>
+                                            <PopoverTrigger asChild>
+                                              <button
+                                                onClick={(e) => e.stopPropagation()}
+                                                className={`${statusStyle.bg} ${statusStyle.text} text-sm px-3 py-1 rounded font-medium cursor-pointer hover:opacity-80 transition-opacity`}
+                                              >
+                                                {athleteStatus}
+                                              </button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-48 p-2" align="end">
+                                              <div className="space-y-1">
+                                                {(["Assigned", "Invited", "Accepted", "Rostered"] as AthleteStatus[]).map((status) => {
+                                                  const style = getStatusBadgeStyle(status)
+                                                  return (
+                                                    <button
+                                                      key={status}
+                                                      onClick={() => {
+                                                        if (assignedAthleteId) {
+                                                          setAthleteStatuses(prev => ({
+                                                            ...prev,
+                                                            [assignedAthleteId]: status
+                                                          }))
+                                                        }
+                                                      }}
+                                                      className={`w-full text-left px-3 py-2 rounded text-sm font-medium transition-colors ${
+                                                        style ? `${style.bg} ${style.text}` : 'bg-muted text-foreground'
+                                                      } hover:opacity-80 ${athleteStatus === status ? 'ring-2 ring-[var(--u-color-emphasis-background-contrast)]' : ''}`}
+                                                    >
+                                                      {status}
+                                                    </button>
+                                                  )
+                                                })}
+                                              </div>
+                                            </PopoverContent>
+                                          </Popover>
                                         )}
                                         <Button
                                           variant="ghost"
@@ -1201,7 +1300,7 @@ export default function AssignAthletesPage() {
               <div className="space-y-3 mb-4">
                 <Select value={selectedProgram} onValueChange={setSelectedProgram}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Program" />
+                    <SelectValue placeholder="Programs" />
                   </SelectTrigger>
                   <SelectContent>
                     {programOptions.map((program) => (
@@ -1492,60 +1591,146 @@ export default function AssignAthletesPage() {
         </SheetContent>
       </Sheet>
 
-      <Dialog open={inviteModalOpen} onOpenChange={setInviteModalOpen}>
+      <Dialog open={inviteModalOpen} onOpenChange={(open) => {
+        setInviteModalOpen(open)
+        if (!open) {
+          setInviteModalStep("teams")
+          setEmailSubject("")
+          setEmailBody("")
+        }
+      }}>
         <DialogContent className="max-w-[600px] p-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
             <DialogTitle className="text-card-foreground text-xl font-semibold">Invite Athletes</DialogTitle>
           </DialogHeader>
 
-          <div className="px-6 py-6">
-            <p className="text-card-foreground text-base mb-4">Choose which teams you would like to send invitations to.</p>
+          {inviteModalStep === "teams" ? (
+            <>
+              <div className="px-6 pt-4 pb-6">
+                <p className="text-card-foreground text-base mb-4">Choose which teams you would like to send invitations to.</p>
 
-            <div className="space-y-1 max-h-[400px] overflow-y-auto">
-              {teams.map((team) => {
-                const isSelected = selectedTeamsForInvite.has(team.id)
-                return (
-                  <button
-                    key={team.id}
-                    onClick={() => toggleTeamForInvite(team.id)}
-                    className="w-full flex items-center justify-between py-2 px-4 hover:bg-muted/50 rounded-lg transition-colors"
-                  >
-                    <span className="text-foreground font-medium text-base">{team.name}</span>
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
-                        isSelected ? "bg-primary" : "border-2 border-border"
-                      }`}
-                    >
-                      {isSelected && <Check className="h-4 w-4 text-white" />}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+                <div className="space-y-1 max-h-[400px] overflow-y-auto">
+                  {teams.map((team) => {
+                    const isSelected = selectedTeamsForInvite.has(team.id)
+                    return (
+                      <button
+                        key={team.id}
+                        onClick={() => toggleTeamForInvite(team.id)}
+                        className="w-full flex items-center justify-between py-2 px-4 hover:bg-muted/50 rounded-lg transition-colors"
+                      >
+                        <span className="text-foreground font-medium text-base">{team.name}</span>
+                        <div
+                          className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                            isSelected ? "bg-primary" : "border-2 border-border"
+                          }`}
+                        >
+                          {isSelected && <Check className="h-4 w-4 text-white" />}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
 
-          <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
-            <Button
-              onClick={() => setInviteModalOpen(false)}
-              variant="ghost"
-              className="text-muted-foreground hover:text-foreground hover:bg-transparent"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                // TODO: Implement next step (send invitations)
-                console.log("Selected teams for invite:", Array.from(selectedTeamsForInvite))
-                setInviteModalOpen(false)
-              }}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-            >
-              Next
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
+              <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                <Button
+                  onClick={() => setInviteModalOpen(false)}
+                  variant="ghost"
+                  className="text-muted-foreground hover:text-foreground hover:bg-transparent"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    setInviteModalStep("email")
+                    setEmailSubject("Team Invitation")
+                    setEmailBody("You have been invited to join the team.")
+                  }}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+                >
+                  Next
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="px-6 pt-4 pb-6">
+                <p className="text-card-foreground text-base mb-4">Compose your invitation email.</p>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Subject</label>
+                    <Input
+                      type="text"
+                      value={emailSubject}
+                      onChange={(e) => setEmailSubject(e.target.value)}
+                      placeholder="Email subject"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Message</label>
+                    <Textarea
+                      value={emailBody}
+                      onChange={(e) => setEmailBody(e.target.value)}
+                      placeholder="Email message"
+                      rows={8}
+                      className="resize-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+                <Button
+                  onClick={() => setInviteModalStep("teams")}
+                  variant="ghost"
+                  className="text-muted-foreground hover:text-foreground hover:bg-transparent"
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={() => {
+                    // Get all athletes assigned to the selected teams
+                    const athleteIdsToInvite = new Set<string>()
+                    selectedTeamsForInvite.forEach((teamId) => {
+                      const teamSlots = teamAssignments[teamId] || {}
+                      Object.values(teamSlots).forEach((athleteId) => {
+                        athleteIdsToInvite.add(athleteId)
+                      })
+                    })
+
+                    // Update status to "Invited" for all athletes in selected teams
+                    setAthleteStatuses((prev) => {
+                      const updated = { ...prev }
+                      athleteIdsToInvite.forEach((athleteId) => {
+                        updated[athleteId] = "Invited"
+                      })
+                      return updated
+                    })
+
+                    console.log("Sending invitations:", {
+                      teams: Array.from(selectedTeamsForInvite),
+                      athletes: Array.from(athleteIdsToInvite),
+                      subject: emailSubject,
+                      body: emailBody
+                    })
+                    setInviteModalOpen(false)
+                    setInviteModalStep("teams")
+                    setEmailSubject("")
+                    setEmailBody("")
+                  }}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  Send
+                </Button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
+
     </div>
   )
 }
