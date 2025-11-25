@@ -429,9 +429,11 @@ export default function AssignAthletesPage() {
   const [athleteFilterSeasonExpanded, setAthleteFilterSeasonExpanded] = useState(true)
   const [athleteFilterProgramExpanded, setAthleteFilterProgramExpanded] = useState(true)
 
-  const [ageRangeMin, setAgeRangeMin] = useState<string>("10")
-  const [ageRangeMax, setAgeRangeMax] = useState<string>("20")
-  const [selectedAthleteFilterGender, setSelectedAthleteFilterGender] = useState<string | null>(null)
+  const [ageRangeMin, setAgeRangeMin] = useState<string>("")
+  const [ageRangeMax, setAgeRangeMax] = useState<string>("")
+  const [selectedAthleteFilterGender, setSelectedAthleteFilterGender] = useState<string>("")
+  const [selectedGrade, setSelectedGrade] = useState<string>("")
+  const [selectedGraduationYear, setSelectedGraduationYear] = useState<string>("")
 
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
   const [inviteModalStep, setInviteModalStep] = useState<"teams" | "email">("teams")
@@ -443,6 +445,8 @@ export default function AssignAthletesPage() {
 
   const [selectedProgram, setSelectedProgram] = useState<string>("")
   const [selectedRegistration, setSelectedRegistration] = useState<Set<string>>(new Set())
+  const [hasSaved, setHasSaved] = useState(false)
+  const [finalizeModalOpen, setFinalizeModalOpen] = useState(false)
 
   const seasonItems = [
     "U13-Black",
@@ -472,7 +476,11 @@ export default function AssignAthletesPage() {
   const activeFiltersCount = selectedSeasons.size
 
   const athleteFilterCount =
-    (ageRangeMin !== "10" || ageRangeMax !== "20" ? 1 : 0) + (selectedAthleteFilterGender ? 1 : 0)
+    (ageRangeMin ? 1 : 0) + 
+    (ageRangeMax ? 1 : 0) + 
+    (selectedAthleteFilterGender ? 1 : 0) +
+    (selectedGrade ? 1 : 0) +
+    (selectedGraduationYear ? 1 : 0)
 
   const getAssignedAthleteIds = () => {
     const assignedIds = new Set<string>()
@@ -493,6 +501,7 @@ export default function AssignAthletesPage() {
       rostered: 0,
       assigned: 0,
       invited: 0,
+      declined: 0,
     }
 
     athleteIds.forEach((athleteId) => {
@@ -501,6 +510,7 @@ export default function AssignAthletesPage() {
       else if (status === "Rostered") stats.rostered++
       else if (status === "Assigned") stats.assigned++
       else if (status === "Invited") stats.invited++
+      else if (status === "Declined") stats.declined++
     })
 
     return stats
@@ -643,14 +653,12 @@ export default function AssignAthletesPage() {
     setTeamAssignments(newAssignments)
   }
 
-  const toggleAthleteFilterGender = (gender: string) => {
-    setSelectedAthleteFilterGender(selectedAthleteFilterGender === gender ? null : gender)
-  }
-
   const clearAthleteFilters = () => {
-    setAgeRangeMin("10")
-    setAgeRangeMax("20")
-    setSelectedAthleteFilterGender(null)
+    setAgeRangeMin("")
+    setAgeRangeMax("")
+    setSelectedAthleteFilterGender("")
+    setSelectedGrade("")
+    setSelectedGraduationYear("")
     setFiltersApplied(false)
   }
 
@@ -925,21 +933,32 @@ export default function AssignAthletesPage() {
       {/* Header - Removed border-b to eliminate the line */}
       <header className="py-2.5" style={{ backgroundColor: 'var(--u-color-base-background)' }}>
         <div className="max-w-[1600px] mx-auto px-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" size="icon" className="text-foreground">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+          <div className="grid grid-cols-3 items-center">
+            <div className="flex items-center">
+              <Button variant="ghost" size="icon" className="text-foreground">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </div>
 
-            <h1 className="text-foreground font-semibold text-lg">Assign Athletes</h1>
+            <h1 className="text-foreground font-semibold text-lg text-center">Assign Athletes</h1>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-end gap-3">
+              <Button 
+                className="bg-muted-foreground hover:bg-foreground text-primary-foreground"
+                disabled={assignedAthleteIds.size === 0}
+                onClick={() => setFinalizeModalOpen(true)}
+              >
+                Finalize Teams
+              </Button>
               <Button onClick={() => setInviteModalOpen(true)} className="bg-muted-foreground hover:bg-foreground text-primary-foreground gap-2">
                 <Send className="h-4 w-4" />
                 Send Invitations
               </Button>
               <Button 
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                onClick={() => router.push('/teams')}
+                onClick={() => {
+                  setHasSaved(true)
+                }}
               >
                 Save
               </Button>
@@ -1116,42 +1135,6 @@ export default function AssignAthletesPage() {
                                   <TooltipTrigger asChild>
                                     <span className="whitespace-nowrap cursor-default">
                                       {viewMode === "grid" ? (
-                                        <>A: <span className="font-bold">{stats.accepted}</span></>
-                                      ) : (
-                                        <>
-                                          <span className="hidden lg:inline">Accepted </span>
-                                          <span className="lg:hidden">A: </span>
-                                          <span className="font-bold">{stats.accepted}</span>
-                                        </>
-                                      )}
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="bg-black text-white border-0 [&>svg]:bg-black [&>svg]:fill-black">
-                                    Accepted
-                                  </TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="whitespace-nowrap cursor-default">
-                                      {viewMode === "grid" ? (
-                                        <>R: <span className="font-bold">{stats.rostered}</span></>
-                                      ) : (
-                                        <>
-                                          <span className="hidden lg:inline">Rostered </span>
-                                          <span className="lg:hidden">R: </span>
-                                          <span className="font-bold">{stats.rostered}</span>
-                                        </>
-                                      )}
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="bg-black text-white border-0 [&>svg]:bg-black [&>svg]:fill-black">
-                                    Rostered
-                                  </TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="whitespace-nowrap cursor-default">
-                                      {viewMode === "grid" ? (
                                         <>As: <span className="font-bold">{stats.assigned}</span></>
                                       ) : (
                                         <>
@@ -1182,6 +1165,42 @@ export default function AssignAthletesPage() {
                                   </TooltipTrigger>
                                   <TooltipContent className="bg-black text-white border-0 [&>svg]:bg-black [&>svg]:fill-black">
                                     Invited
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="whitespace-nowrap cursor-default">
+                                      {viewMode === "grid" ? (
+                                        <>A: <span className="font-bold">{stats.accepted}</span></>
+                                      ) : (
+                                        <>
+                                          <span className="hidden lg:inline">Accepted </span>
+                                          <span className="lg:hidden">A: </span>
+                                          <span className="font-bold">{stats.accepted}</span>
+                                        </>
+                                      )}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="bg-black text-white border-0 [&>svg]:bg-black [&>svg]:fill-black">
+                                    Accepted
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="whitespace-nowrap cursor-default">
+                                      {viewMode === "grid" ? (
+                                        <>D: <span className="font-bold">{stats.declined}</span></>
+                                      ) : (
+                                        <>
+                                          <span className="hidden lg:inline">Declined </span>
+                                          <span className="lg:hidden">D: </span>
+                                          <span className="font-bold">{stats.declined}</span>
+                                        </>
+                                      )}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="bg-black text-white border-0 [&>svg]:bg-black [&>svg]:fill-black">
+                                    Declined
                                   </TooltipContent>
                                 </Tooltip>
                               </div>
@@ -1277,7 +1296,7 @@ export default function AssignAthletesPage() {
                                             </PopoverTrigger>
                                             <PopoverContent className="w-48 p-2" align="end">
                                               <div className="space-y-1">
-                                                {(["Assigned", "Invited", "Accepted", "Rostered"] as AthleteStatus[]).map((status) => {
+                                                {(["Assigned", "Invited", "Accepted", "Declined"] as AthleteStatus[]).map((status) => {
                                                   const style = getStatusBadgeStyle(status)
                                                   return (
                                                     <button
@@ -1459,12 +1478,13 @@ export default function AssignAthletesPage() {
                     </Button>
                   </SheetTrigger>
 
-                  <SheetContent className="w-[380px] sm:max-w-[380px] bg-card flex flex-col">
-                    <SheetHeader className="flex-shrink-0">
+                  <SheetContent className="w-[380px] sm:max-w-[380px] bg-card flex flex-col p-0">
+                    <SheetHeader className="flex-shrink-0 px-6 pt-4 pb-3">
                       <SheetTitle className="text-card-foreground text-left">Filter Athletes by</SheetTitle>
                     </SheetHeader>
+                    <div className="border-b border-border -mx-6 mb-4"></div>
 
-                    <div className="flex-1 overflow-y-auto mt-6 pr-2">
+                    <div className="flex-1 overflow-y-auto px-6">
                       <div className="space-y-6">
                         {/* Active Filters */}
                         {athleteFilterCount > 0 && (
@@ -1481,65 +1501,90 @@ export default function AssignAthletesPage() {
                           </div>
                         )}
 
-                        <div>
-                          <label className="text-sm text-card-foreground font-medium mb-3 block">Age Range</label>
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-3">
-                              <div className="flex-1">
-                                <label className="text-xs text-muted-foreground mb-1 block">Min Age</label>
-                                <Input
-                                  type="number"
-                                  value={ageRangeMin}
-                                  onChange={(e) => setAgeRangeMin(e.target.value)}
-                                  min="10"
-                                  max="20"
-                                  className="w-full"
-                                />
-                              </div>
-                              <div className="flex-1">
-                                <label className="text-xs text-muted-foreground mb-1 block">Max Age</label>
-                                <Input
-                                  type="number"
-                                  value={ageRangeMax}
-                                  onChange={(e) => setAgeRangeMax(e.target.value)}
-                                  min="10"
-                                  max="20"
-                                  className="w-full"
-                                />
-                              </div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              Showing athletes aged {ageRangeMin} to {ageRangeMax}
-                            </p>
+                        <div className="flex items-end gap-3">
+                          <div className="flex-1">
+                            <label className="text-sm text-card-foreground font-medium mb-3 block">Minimum Age</label>
+                            <Select value={ageRangeMin} onValueChange={setAgeRangeMin}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Min" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ageOptions.map((age) => (
+                                  <SelectItem key={age} value={age}>
+                                    {age}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-sm text-card-foreground font-medium mb-3 block">Maximum Age</label>
+                            <Select value={ageRangeMax} onValueChange={setAgeRangeMax}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Max" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ageOptions.map((age) => (
+                                  <SelectItem key={age} value={age}>
+                                    {age}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
 
-                        <div className="border-t border-border" />
-
-                        {/* Gender Filter */}
                         <div>
                           <label className="text-sm text-card-foreground font-medium mb-3 block">Gender</label>
-                          <div className="space-y-2">
-                            {["Male", "Female"].map((gender) => (
-                              <button
-                                key={gender}
-                                onClick={() => toggleAthleteFilterGender(gender)}
-                                className={`text-foreground text-sm py-2 px-3 rounded w-full text-left flex items-center justify-between ${
-                                  selectedAthleteFilterGender === gender
-                                    ? "bg-border"
-                                    : "bg-muted hover:bg-border/50"
-                                }`}
-                              >
-                                <span>{gender}</span>
-                                {selectedAthleteFilterGender === gender && <Check className="h-4 w-4" />}
-                              </button>
-                            ))}
-                          </div>
+                          <Select value={selectedAthleteFilterGender} onValueChange={setSelectedAthleteFilterGender}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Male">Male</SelectItem>
+                              <SelectItem value="Female">Female</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <label className="text-sm text-card-foreground font-medium mb-3 block">Grade</label>
+                          <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {["9th", "10th", "11th", "12th"].map((grade) => (
+                                <SelectItem key={grade} value={grade}>
+                                  {grade}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <label className="text-sm text-card-foreground font-medium mb-3 block">Graduation Year</label>
+                          <Select value={selectedGraduationYear} onValueChange={setSelectedGraduationYear}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 10 }, (_, i) => {
+                                const year = new Date().getFullYear() + i - 2
+                                return (
+                                  <SelectItem key={year} value={year.toString()}>
+                                    {year}
+                                  </SelectItem>
+                                )
+                              })}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex-shrink-0 pt-4 border-t border-border mt-4">
+                    <div className="flex-shrink-0 pt-4 border-t border-border mt-4 px-6 pb-6">
                       <div className="flex gap-3">
                         <Button
                           onClick={() => setAthleteFilterOpen(false)}
@@ -1555,7 +1600,7 @@ export default function AssignAthletesPage() {
                           }}
                           className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                         >
-                          Get Athletes
+                          Apply
                         </Button>
                       </div>
                     </div>
@@ -1789,6 +1834,39 @@ export default function AssignAthletesPage() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={finalizeModalOpen} onOpenChange={setFinalizeModalOpen}>
+        <DialogContent className="max-w-[600px] p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
+            <DialogTitle className="text-card-foreground text-xl font-semibold">Finalize Teams</DialogTitle>
+          </DialogHeader>
+
+          <div className="px-6 pt-4 pb-6">
+            <p className="text-card-foreground text-base mb-4">
+              Are you sure you want to finalize your rosters for all your teams? This will contact your CSM to discuss your packaging options.
+            </p>
+          </div>
+
+          <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
+            <Button
+              onClick={() => setFinalizeModalOpen(false)}
+              variant="ghost"
+              className="text-muted-foreground hover:text-foreground hover:bg-transparent"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                console.log("Finalizing teams...")
+                setFinalizeModalOpen(false)
+              }}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              Finalize
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
