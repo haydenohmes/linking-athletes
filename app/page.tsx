@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ChevronDown, ChevronRight, ChevronUp, ArrowLeft, Filter, Send, Check, GripVertical, X, LayoutGrid, List, ArrowUpDown, ArrowRight, MoreVertical } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronUp, ArrowLeft, Filter, Send, Check, GripVertical, X, LayoutGrid, List, ArrowUpDown, ArrowRight, MoreVertical, AlertTriangle } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog" // Added Dialog components
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -959,39 +959,20 @@ export default function AssignAthletesPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
-                    size="icon"
-                    className="bg-muted-foreground hover:bg-foreground text-primary-foreground"
+                    className="bg-muted-foreground hover:bg-foreground text-primary-foreground h-[40px] min-h-[40px] px-3"
                   >
                     <MoreVertical className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {assignedAthleteIds.size === 0 ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="block w-full">
-                          <DropdownMenuItem
-                            disabled={true}
-                            className="text-foreground"
-                          >
-                            Finalize Teams
-                          </DropdownMenuItem>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-black text-white border-0 [&>svg]:bg-black [&>svg]:fill-black">
-                        Assign at least one athlete to a team to finalize
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        setFinalizeModalOpen(true)
-                      }}
-                      className="text-foreground"
-                    >
-                      Finalize Teams
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setFinalizeModalOpen(true)
+                    }}
+                    className="text-foreground"
+                  >
+                    Finalize Teams
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -1879,6 +1860,12 @@ export default function AssignAthletesPage() {
             <p className="text-card-foreground text-base mb-4">
               Are you sure you want to finalize your rosters for all your teams? This will contact your CSM to discuss your packaging options.
             </p>
+            {assignedAthleteIds.size === 0 && (
+              <div className="mt-4 text-destructive text-sm flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <span>You cannot finalize teams without any athletes assigned. Please assign at least one athlete to a team before finalizing.</span>
+              </div>
+            )}
           </div>
 
           <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
@@ -1894,7 +1881,8 @@ export default function AssignAthletesPage() {
                 console.log("Finalizing teams...")
                 setFinalizeModalOpen(false)
               }}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              disabled={assignedAthleteIds.size === 0}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Finalize
             </Button>
