@@ -1123,14 +1123,14 @@ export default function AssignAthletesPage() {
             <div className="overflow-y-auto flex-1">
               {/* Team cards - each in separate white box */}
               {filteredTeams.length > 0 ? (
-                <div className={`${viewMode === "grid" ? "grid grid-cols-2 gap-3" : "space-y-3"}`}>
+                <div className={`${viewMode === "grid" ? "grid gap-3 items-start" : "space-y-3"}`} style={viewMode === "grid" ? { gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)" } : undefined}>
                   {filteredTeams.map((team) => {
                     const stats = getTeamStats(team.id)
                     const isCollapsedDragTarget = !expandedTeams.has(team.id) && dragOverCollapsedTeam === team.id
                     const isContainerDragTarget = expandedTeams.has(team.id) && dragOverTeamContainer === team.id
 
                     return (
-                      <div key={team.id} className="rounded bg-card p-4">
+                      <div key={team.id} className="rounded bg-card p-4 min-w-0">
                         <button
                           onClick={() => toggleTeam(team.id)}
                           onDragOver={
