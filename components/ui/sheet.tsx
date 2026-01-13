@@ -42,16 +42,19 @@ const sheetVariants = {
 
 interface SheetContentProps extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> {
   side?: keyof typeof sheetVariants.side
+  noOverlay?: boolean
+  disableAnimation?: boolean
 }
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-  ({ side = "right", className, children, ...props }, ref) => (
+  ({ side = "right", className, children, noOverlay = false, disableAnimation = false, ...props }, ref) => (
     <SheetPortal>
-      <SheetOverlay />
+      {!noOverlay && <SheetOverlay />}
       <SheetPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed z-50 gap-4 bg-white p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+          "fixed z-50 gap-4 bg-white p-6 shadow-lg transition ease-in-out",
+          !disableAnimation && "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
           sheetVariants.side[side],
           className,
         )}

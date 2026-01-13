@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "NODE_OPTIONS='--no-warnings' next dev -H 127.0.0.1 -p 3000",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "next start",
+    "assets": "node server-assets.js"
   },
   "dependencies": {
     "@adam-porter/shared-uniform-styles": "github:adam-porter/shared-uniform-styles",

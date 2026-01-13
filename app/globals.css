@@ -206,4 +206,20 @@
     border-color: var(--u-color-emphasis-background-contrast) !important;
     box-shadow: 0 0 0 2px rgba(2, 115, 227, 0.1) !important;
   }
+  
+  /* Custom toast styling - white background with green checkmark area */
+  .toast-success-custom {
+    background-color: #ffffff !important;
+    color: #36485c !important;
+    border: 1px solid #c4c6c8 !important;
+  }
+  
+  .toast-success-custom [data-icon] {
+    background-color: #10b981 !important;
+    color: #ffffff !important;
+  }
+  
+  .toast-success-custom [data-icon] svg {
+    color: #ffffff !important;
+  }
 }

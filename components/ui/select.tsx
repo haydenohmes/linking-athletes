@@ -17,17 +17,19 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-[40px] w-full items-center justify-between rounded-[2px] border border-[var(--u-color-line-subtle)] bg-[var(--u-color-background-container)] px-3 py-2 text-base text-[var(--u-color-base-foreground-contrast)] outline-none transition-[border-color,box-shadow]",
-      "focus:border-[var(--u-color-emphasis-background-contrast)] focus:shadow-[0_0_0_2px_rgba(2,115,227,0.1)]",
+      "flex h-[40px] w-full items-center justify-between rounded-[2px] border border-[#c4c6c8] bg-[#fefefe] px-3 py-2 text-base text-[#36485c] outline-none transition-[border-color,box-shadow]",
+      "focus:border-[#0273e3] focus:shadow-[0_0_0_2px_rgba(2,115,227,0.1)]",
       "disabled:cursor-not-allowed disabled:opacity-50",
-      "[&>span]:line-clamp-1",
+      "[&>span]:line-clamp-1 [&>span]:text-[#36485c]",
+      "[&[data-state=open]>svg]:rotate-180",
       className
     )}
+    style={{ backgroundColor: "#fefefe", color: "#36485c", borderColor: "#c4c6c8" }}
     {...props}
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 opacity-50" />
+      <ChevronDown className="h-4 w-4 text-[#36485c] transition-transform duration-200" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ))
@@ -76,11 +78,12 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-[2px] border border-[var(--u-color-line-subtle)] bg-[var(--u-color-background-container)] text-[var(--u-color-base-foreground-contrast)] shadow-md",
+        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-[2px] border border-[#c4c6c8] bg-[#fefefe] text-[#36485c] shadow-md",
         position === "popper" &&
           "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
         className
       )}
+      style={{ backgroundColor: "#fefefe", color: "#36485c", borderColor: "#c4c6c8" }}
       position={position}
       {...props}
     >
@@ -119,18 +122,13 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-base outline-none focus:bg-[var(--u-color-base-background)] focus:text-[var(--u-color-base-foreground-contrast)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-4 pr-2 text-base text-[#36485c] outline-none hover:bg-[#f8f8f9] focus:bg-[#f8f8f9] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
+    style={{ color: "#36485c" }}
     {...props}
   >
-    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-      <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
-      </SelectPrimitive.ItemIndicator>
-    </span>
-
-    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    <SelectPrimitive.ItemText className="text-[#36485c]">{children}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ))
 SelectItem.displayName = SelectPrimitive.Item.displayName
