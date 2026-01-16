@@ -805,104 +805,6 @@ export default function AddOrConnectAthletePage() {
                           </div>
                         </div>
                       )}
-                      
-                      {/* Connection Request Cards (pending/expired only) */}
-                      {(() => {
-                        const connectionRequests = connectionAttempts.filter((attempt) => 
-                          attempt.status === "pending"
-                        )
-                        
-                        if (connectionRequests.length === 0) return null
-                        
-                        return (
-                          <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
-                            <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#c0c6cd] text-[16px] font-medium w-full mb-2">
-                              <p className="leading-[1.15]">Connection Requests</p>
-                            </div>
-                            {connectionRequests.map((attempt) => {
-                          const isExpired = attempt.email.toLowerCase() === "hayden.ohmes@hudl.com"
-                          const statusBadge = getStatusBadge(attempt.status, attempt.email)
-                          const StatusIcon = statusBadge.icon
-                          return (
-                            <div
-                              key={attempt.id}
-                              className={`bg-[#21262b] border flex flex-col gap-3 items-start px-4 py-3 relative rounded-[4px] shrink-0 w-full ${
-                                isExpired 
-                                  ? "border-[#ff8c00]" 
-                                  : "border-[#42474c]"
-                              }`}
-                            >
-                              <div className="flex gap-3 items-center relative shrink-0 w-full">
-                                <div className="basis-0 flex flex-col gap-1 grow items-start min-h-px min-w-px relative shrink-0">
-                                  <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#fefefe] text-[16px] w-full">
-                                    <p className="leading-[1.4]">{attempt.email}</p>
-                                  </div>
-                                  {attempt.status === "pending" && (
-                                    <button
-                                      onClick={() => handleResendAttempt(attempt.email)}
-                                      className="flex items-center gap-1 text-[#c0c6cd] hover:text-[#85909e] text-[14px] transition-colors mt-0.5"
-                                    >
-                                      Resend Code
-                                      <ArrowRight className="size-3" />
-                                    </button>
-                                  )}
-                                </div>
-                                <div className="ml-auto flex gap-2 items-center justify-end relative shrink-0">
-                                  {isExpired ? (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="flex items-center gap-2 cursor-help justify-end mr-3">
-                                          <StatusIcon className={`size-4 ${statusBadge.color}`} />
-                                          <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[14px]">
-                                            <p className={`leading-[1.4] ${statusBadge.color}`}>{statusBadge.text}</p>
-                                          </div>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Code expired-please resend</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  ) : attempt.status === "pending" ? (
-                                    <button
-                                      onClick={() => {
-                                        setEmail(attempt.email)
-                                        setMode("connect")
-                                        setConnectStep("verification")
-                                      }}
-                                      className="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded hover:bg-[#2a2f35] hover:text-[#fefefe] transition-colors text-[#c0c6cd] text-[14px] justify-end"
-                                    >
-                                      <div className="flex flex-col justify-center leading-[0] relative shrink-0">
-                                        <p className="leading-[1.4]">{statusBadge.text}</p>
-                                      </div>
-                                    </button>
-                                  ) : (
-                                    <>
-                                      <StatusIcon className={`size-4 ${statusBadge.color}`} />
-                                      <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#c0c6cd] text-[14px]">
-                                        <p className="leading-[1.4]">{statusBadge.text}</p>
-                                      </div>
-                                    </>
-                                  )}
-                                  {attempt.status === "pending" && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleCancelClick(attempt.email)
-                                      }}
-                                      className="flex items-center justify-center size-6 rounded hover:bg-[#0f1215] transition-colors shrink-0 ml-2"
-                                      aria-label="Cancel connection request"
-                                    >
-                                      <X className="size-4 text-[#85909e] hover:text-[#c0c6cd]" />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                            })}
-                          </div>
-                        )
-                      })()}
                     </div>
                   )}
                 </>
@@ -1170,6 +1072,92 @@ export default function AddOrConnectAthletePage() {
                       </Button>
                     </div>
                   </div>
+
+                  {/* Connection Request Cards (pending/expired only) */}
+                  {(() => {
+                    const connectionRequests = connectionAttempts.filter((attempt) => 
+                      attempt.status === "pending"
+                    )
+                    
+                    if (connectionRequests.length === 0) return null
+                    
+                    return (
+                      <div className="flex flex-col gap-2 items-start relative shrink-0 w-full mt-3">
+                        <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#c0c6cd] text-[16px] font-medium w-full mb-2">
+                          <p className="leading-[1.15]">Connection Requests</p>
+                        </div>
+                        {connectionRequests.map((attempt) => {
+                      const isExpired = attempt.email.toLowerCase() === "hayden.ohmes@hudl.com"
+                      const statusBadge = getStatusBadge(attempt.status, attempt.email)
+                      const StatusIcon = statusBadge.icon
+                      return (
+                        <div
+                          key={attempt.id}
+                          className={`bg-[#21262b] border flex flex-col gap-3 items-start px-4 py-3 relative rounded-[4px] shrink-0 w-full ${
+                            isExpired 
+                              ? "border-[#ff8c00]" 
+                              : "border-[#42474c]"
+                          }`}
+                        >
+                          <div className="flex gap-3 items-center relative shrink-0 w-full">
+                            <div className="basis-0 flex flex-col gap-1 grow items-start min-h-px min-w-px relative shrink-0">
+                              <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#fefefe] text-[16px] w-full">
+                                <p className="leading-[1.4]">{attempt.email}</p>
+                              </div>
+                              {attempt.status === "pending" && (
+                                <button
+                                  onClick={() => handleResendAttempt(attempt.email)}
+                                  className="flex items-center gap-1 text-[#c0c6cd] hover:text-[#85909e] text-[14px] transition-colors mt-0.5"
+                                >
+                                  Resend Code
+                                  <ArrowRight className="size-3" />
+                                </button>
+                              )}
+                            </div>
+                            <div className="ml-auto flex gap-2 items-center justify-end relative shrink-0">
+                              {isExpired ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center gap-2 cursor-help justify-end mr-3">
+                                      <StatusIcon className={`size-4 ${statusBadge.color}`} />
+                                      <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[14px]">
+                                        <p className={`leading-[1.4] ${statusBadge.color}`}>{statusBadge.text}</p>
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Code expired-please resend</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : attempt.status === "pending" ? (
+                                <button
+                                  onClick={() => {
+                                    setEmail(attempt.email)
+                                    setMode("connect")
+                                    setConnectStep("verification")
+                                  }}
+                                  className="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded hover:bg-[#2a2f35] hover:text-[#fefefe] transition-colors text-[#c0c6cd] text-[14px] justify-end"
+                                >
+                                  <div className="flex flex-col justify-center leading-[0] relative shrink-0">
+                                    <p className="leading-[1.4]">{statusBadge.text}</p>
+                                  </div>
+                                </button>
+                              ) : (
+                                <>
+                                  <StatusIcon className={`size-4 ${statusBadge.color}`} />
+                                  <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#c0c6cd] text-[14px]">
+                                    <p className="leading-[1.4]">{statusBadge.text}</p>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                        })}
+                      </div>
+                    )
+                  })()}
                 </>
               )}
 
