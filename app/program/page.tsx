@@ -4,7 +4,8 @@ import React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { CheckCircle2, Info, MoreVertical, ChevronDown } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { CheckCircle2, Info, MoreVertical, ChevronDown, AlertTriangle } from "lucide-react"
 import { SendLinkDialog } from "@/components/send-link-dialog"
 import { ConnectionRequestSentDialog } from "@/components/connection-request-sent-dialog"
 
@@ -131,9 +132,26 @@ export default function ProgramPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const version = searchParams.get("version") || "1"
+  const displayMode = searchParams.get("display") || "cards"
   const [showSendLinkDialog, setShowSendLinkDialog] = React.useState(false)
   const [showConnectionSentDialog, setShowConnectionSentDialog] = React.useState(false)
   const [email, setEmail] = React.useState("")
+  const [newlyConnectedAthlete, setNewlyConnectedAthlete] = React.useState<{name: string, email: string, isNew: boolean} | null>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("newlyConnectedAthlete")
+      if (stored) {
+        try {
+          const athlete = JSON.parse(stored)
+          // Clear it after reading so it only shows once
+          localStorage.removeItem("newlyConnectedAthlete")
+          return athlete
+        } catch (e) {
+          return null
+        }
+      }
+    }
+    return null
+  })
 
   const handleSendLink = () => {
     setShowSendLinkDialog(false)
@@ -215,11 +233,46 @@ export default function ProgramPage() {
                         KO
                       </AvatarFallback>
                     </Avatar>
+                    {newlyConnectedAthlete && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => {
+                              // Store athlete name for pre-populating the form
+                              if (typeof window !== "undefined" && newlyConnectedAthlete) {
+                                localStorage.setItem("addAthleteName", newlyConnectedAthlete.name)
+                              }
+                              const params = new URLSearchParams()
+                              if (version !== "1") params.set("version", version)
+                              if (displayMode === "avatars") params.set("display", "avatars")
+                              params.set("from", "program")
+                              params.set("mode", "add")
+                              const queryString = params.toString() ? `?${params.toString()}` : ""
+                              router.push(`/add-or-connect-athlete${queryString}`)
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <Avatar className="size-[32px]">
+                              <AvatarFallback className="bg-[#38434f] text-[#85909e] text-[12px] font-bold border border-[#85909e]">
+                                {newlyConnectedAthlete.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Information incomplete</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                   <button
                     onClick={() => {
-                      const versionParam = version !== "1" ? `?version=${version}&from=program` : "?version=1&from=program"
-                      router.push(`/add-or-connect-athlete${versionParam}`)
+                      const params = new URLSearchParams()
+                      if (version !== "1") params.set("version", version)
+                      if (displayMode === "avatars") params.set("display", "avatars")
+                      params.set("from", "program")
+                      const queryString = params.toString() ? `?${params.toString()}` : ""
+                      router.push(`/add-or-connect-athlete${queryString}`)
                     }}
                     className="cursor-pointer"
                   >
@@ -365,8 +418,12 @@ export default function ProgramPage() {
                     <div className="flex flex-col gap-0 items-start justify-center relative shrink-0 w-full">
                       <button
                         onClick={() => {
-                          const versionParam = version !== "1" ? `?version=${version}&from=program` : "?version=1&from=program"
-                          router.push(`/add-or-connect-athlete${versionParam}`)
+                          const params = new URLSearchParams()
+                          if (version !== "1") params.set("version", version)
+                          if (displayMode === "avatars") params.set("display", "avatars")
+                          params.set("from", "program")
+                          const queryString = params.toString() ? `?${params.toString()}` : ""
+                          router.push(`/add-or-connect-athlete${queryString}`)
                         }}
                         className="text-underline decoration-solid font-medium leading-[1.4] not-italic relative shrink-0 text-[#0a93f5] text-[14px] underline w-full text-left"
                       >

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "NODE_OPTIONS='--no-warnings' next dev -H 127.0.0.1 -p 3000",
+    "dev": "NODE_OPTIONS='--no-warnings' next dev -H localhost -p 3000",
     "lint": "eslint .",
     "start": "next start",
     "assets": "node server-assets.js"
