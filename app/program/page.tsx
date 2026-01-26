@@ -43,7 +43,9 @@ function ProfileBanner({ className, breakpoint = "xl" }: ProfileBannerProps) {
         <div className="flex flex-col gap-0 items-start relative shrink-0 w-full z-[1]">
           <div className="flex gap-4 items-center justify-center relative shrink-0 w-full">
             <div className="relative shrink-0 size-[64px]">
-              <img alt="" className="block max-w-none size-full rounded-full" height="64" src={imgAvatar} width="64" />
+              <div className="absolute inset-0 rounded-full border-2 border-[#ffd700] bg-[#0d2959] flex items-center justify-center">
+                <span className="text-white text-[16px] font-bold uppercase">HTFS</span>
+              </div>
             </div>
             {element}
           </div>
@@ -57,8 +59,8 @@ function ProfileBanner({ className, breakpoint = "xl" }: ProfileBannerProps) {
       <div className="flex flex-col gap-0 items-start relative shrink-0 w-full z-[1]">
         <div className="flex gap-4 items-center justify-center relative shrink-0 w-full">
           <div className="relative shrink-0 size-[64px]">
-            <div className="absolute inset-0">
-              <img alt="" className="block max-w-none size-full rounded-full" src={imgAvatar1} />
+            <div className="absolute inset-0 rounded-full border-2 border-[#ffd700] bg-[#0d2959] flex items-center justify-center">
+              <span className="text-white text-[16px] font-bold uppercase">HTFS</span>
             </div>
           </div>
           {element}
@@ -133,6 +135,7 @@ export default function ProgramPage() {
   const searchParams = useSearchParams()
   const version = searchParams.get("version") || "1"
   const displayMode = searchParams.get("display") || "cards"
+  const showConnectionRequests = searchParams.get("connectionRequests") === "true"
   const [showSendLinkDialog, setShowSendLinkDialog] = React.useState(false)
   const [showConnectionSentDialog, setShowConnectionSentDialog] = React.useState(false)
   const [email, setEmail] = React.useState("")
@@ -172,6 +175,37 @@ export default function ProgramPage() {
             breakpoint="l" 
             className="bg-gradient-to-b flex flex-col from-[rgba(11,33,57,0.9)] gap-0 isolate items-start max-w-[1919px] min-w-[1366px] overflow-clip px-6 py-[40px] relative shrink-0 w-[1512px] to-[rgba(0,0,0,0)]" 
           />
+          
+          {/* Login Banner */}
+          <div className="bg-[#282c34] flex flex-col gap-4 items-center justify-center px-6 py-8 relative shrink-0 w-full max-w-[1128px] rounded-[4px] mt-4 mb-8">
+            <div className="flex flex-col gap-2 items-center text-center relative shrink-0 w-full">
+              <h2 className="text-white text-[20px] font-bold leading-[1.2]">
+                Add or connect athletes to get started.
+              </h2>
+              <p className="text-[#a0a2a6] text-[16px] leading-[1.4]">
+                We'll use their details to show the registrations they're eligible for.
+              </p>
+            </div>
+            <div className="flex flex-col gap-6 items-center relative shrink-0 w-full">
+              <Button 
+                variant="default" 
+                size="default" 
+                onClick={() => {
+                  const params = new URLSearchParams()
+                  if (version !== "1") params.set("version", version)
+                  if (displayMode === "avatars") params.set("display", "avatars")
+                  if (showConnectionRequests) params.set("connectionRequests", "true")
+                  params.set("from", "program")
+                  const queryString = params.toString() ? `?${params.toString()}` : ""
+                  router.push(`/add-or-connect-athlete${queryString}`)
+                }}
+                className="w-auto px-6 py-2 bg-[#3370f4] hover:bg-[#2a5dd9] text-white font-bold mt-4"
+              >
+                Add or Connect Athletes
+              </Button>
+            </div>
+          </div>
+          
           <div className="flex flex-col gap-6 items-start max-w-[1128px] pb-6 pt-0 px-0 relative shrink-0 w-full">
             <div className="flex flex-col gap-4 items-start max-w-[1365px] min-w-[768px] relative shrink-0 w-full">
               <div className="flex flex-col gap-2 items-start relative shrink-0 w-full">
@@ -245,6 +279,7 @@ export default function ProgramPage() {
                               const params = new URLSearchParams()
                               if (version !== "1") params.set("version", version)
                               if (displayMode === "avatars") params.set("display", "avatars")
+                              if (showConnectionRequests) params.set("connectionRequests", "true")
                               params.set("from", "program")
                               params.set("mode", "add")
                               const queryString = params.toString() ? `?${params.toString()}` : ""
@@ -270,6 +305,7 @@ export default function ProgramPage() {
                       const params = new URLSearchParams()
                       if (version !== "1") params.set("version", version)
                       if (displayMode === "avatars") params.set("display", "avatars")
+                      if (showConnectionRequests) params.set("connectionRequests", "true")
                       params.set("from", "program")
                       const queryString = params.toString() ? `?${params.toString()}` : ""
                       router.push(`/add-or-connect-athlete${queryString}`)
@@ -421,6 +457,7 @@ export default function ProgramPage() {
                           const params = new URLSearchParams()
                           if (version !== "1") params.set("version", version)
                           if (displayMode === "avatars") params.set("display", "avatars")
+                          if (showConnectionRequests) params.set("connectionRequests", "true")
                           params.set("from", "program")
                           const queryString = params.toString() ? `?${params.toString()}` : ""
                           router.push(`/add-or-connect-athlete${queryString}`)

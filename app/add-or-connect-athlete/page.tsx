@@ -32,6 +32,8 @@ export default function AddOrConnectAthletePage() {
   const version = searchParams.get("version") || "1"
   // Get display mode from query parameter (defaults to "cards" if not provided)
   const displayMode = searchParams.get("display") || "cards"
+  // Get connection requests variant from query parameter
+  const showConnectionRequests = searchParams.get("connectionRequests") === "true"
 
   // Both versions redirect to program page first
   React.useEffect(() => {
@@ -41,11 +43,12 @@ export default function AddOrConnectAthletePage() {
     // Don't redirect if mode=add is specified (user wants to go directly to add form)
     const urlParams = new URLSearchParams(window.location.search)
     const urlMode = urlParams.get("mode")
-    const shouldRedirect = !window.location.search.includes("from=program") && displayMode === "cards" && urlMode !== "add"
+    const shouldRedirect = !window.location.search.includes("from=program") && displayMode === "cards" && urlMode !== "add" && !showConnectionRequests
     if (shouldRedirect) {
       const params = new URLSearchParams()
       if (version !== "1") params.set("version", version)
       if (displayMode === "avatars") params.set("display", "avatars")
+      if (showConnectionRequests) params.set("connectionRequests", "true")
       const queryString = params.toString() ? `?${params.toString()}` : ""
       router.push(`/program${queryString}`)
     }
@@ -209,63 +212,48 @@ export default function AddOrConnectAthletePage() {
       }
     }
     
+    // Remove old entries we don't want
+    attempts = attempts.filter(a => 
+      a.email.toLowerCase() !== "hayden.ohmes@hudl.com" &&
+      a.email.toLowerCase() !== "kiersten.ohmes@example.com" &&
+      a.email.toLowerCase() !== "jane.doe@example.com" &&
+      a.email.toLowerCase() !== "expired.user@example.com"
+    )
+    
     // Add default connected athletes for version 1
     const defaultAthletes = [
       {
-        id: "weston-ohmes",
-        email: "weston.ohmes@example.com",
-        name: "Weston Ohmes",
-        status: "connected",
-        requestedDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-      },
-      {
-        id: "kiersten-ohmes",
-        email: "kiersten.ohmes@example.com",
-        name: "Kiersten Ohmes",
+        id: "john-doe",
+        email: "john.doe@hudl.com",
+        name: "John Doe",
         status: "pending",
         requestedDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
       },
       {
-        id: "hayden-ohmes",
-        email: "hayden.ohmes@hudl.com",
-        name: "Hayden Ohmes",
+        id: "jane-doe",
+        email: "jane.doe@hudl.com",
+        name: "Jane Doe",
         status: "pending",
         requestedDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
       }
     ]
     
-    // Merge default athletes with stored attempts, avoiding duplicates
-    const existingIds = new Set(attempts.map(a => a.id))
-    const newAthletes = defaultAthletes.filter(a => !existingIds.has(a.id))
-    const allAttempts = [...newAthletes, ...attempts]
+    // Always ensure john.doe@hudl.com is first, jane.doe@hudl.com is second
+    // Remove any existing entries for these emails from stored attempts
+    const filteredAttempts = attempts.filter(a => 
+      a.email.toLowerCase() !== "john.doe@hudl.com" && 
+      a.email.toLowerCase() !== "jane.doe@hudl.com"
+    )
     
-    // Ensure hayden.ohmes@hudl.com is always present as expired (check by email, not just id)
-    const hasHayden = allAttempts.some(a => a.email.toLowerCase() === "hayden.ohmes@hudl.com")
-    if (!hasHayden) {
-      allAttempts.push({
-        id: "hayden-ohmes",
-        email: "hayden.ohmes@hudl.com",
-        name: "Hayden Ohmes",
-        status: "pending",
-        requestedDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-      })
-    } else {
-      // Update existing hayden to ensure it has pending status
-      const haydenIndex = allAttempts.findIndex(a => a.email.toLowerCase() === "hayden.ohmes@hudl.com")
-      if (haydenIndex >= 0) {
-        allAttempts[haydenIndex] = {
-          ...allAttempts[haydenIndex],
-          status: "pending"
-        }
-      }
-    }
+    // Put default athletes first in the correct order, then other attempts
+    const allAttempts = [...defaultAthletes, ...filteredAttempts]
     
     // Save to localStorage to persist
     if (typeof window !== "undefined") {
-      localStorage.setItem("connectionAttempts", JSON.stringify(allAttempts))
+      localStorage.setItem("connectionAttempts", JSON.stringify(filteredAttempts))
     }
     
-    setConnectionAttempts(allAttempts)
+    setConnectionAttempts(filteredAttempts)
   }, [])
 
   // Keep version parameter in URL when navigating
@@ -365,6 +353,7 @@ export default function AddOrConnectAthletePage() {
       const params = new URLSearchParams()
       if (version !== "1") params.set("version", version)
       if (displayMode === "avatars") params.set("display", "avatars")
+      if (showConnectionRequests) params.set("connectionRequests", "true")
       const queryString = params.toString() ? `?${params.toString()}` : ""
       router.push(`/program${queryString}`)
     } else if (mode === "connect") {
@@ -402,6 +391,7 @@ export default function AddOrConnectAthletePage() {
     const params = new URLSearchParams()
     if (version !== "1") params.set("version", version)
     if (displayMode === "avatars") params.set("display", "avatars")
+    if (showConnectionRequests) params.set("connectionRequests", "true")
     const queryString = params.toString() ? `?${params.toString()}` : ""
     router.push(`/program${queryString}`)
   }
@@ -649,7 +639,7 @@ export default function AddOrConnectAthletePage() {
 
   const getStatusBadge = (status: string, email?: string) => {
     // Check if this is the expired email
-    if (email?.toLowerCase() === "hayden.ohmes@hudl.com") {
+    if (email?.toLowerCase() === "jane.doe@hudl.com") {
       return { icon: AlertTriangle, color: "text-[#ff8c00]", text: "Expired" }
     }
     switch (status) {
@@ -773,8 +763,8 @@ export default function AddOrConnectAthletePage() {
                     </div>
                   </div>
 
-                  {/* Athletes Status Module - Version 1 only */}
-                  {version === "1" && connectionAttempts.length > 0 && (
+                  {/* Athletes Status Module - Show for version 1 or connectionRequests version */}
+                  {(version === "1" || showConnectionRequests) && connectionAttempts.length > 0 && (
                     <div className="flex flex-col gap-4 items-start relative shrink-0 w-full">
                       <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#c0c6cd] text-[16px] font-medium w-full">
                         <p className="leading-[1.15]">My Athletes</p>
@@ -1073,88 +1063,132 @@ export default function AddOrConnectAthletePage() {
                     </div>
                   </div>
 
-                  {/* Connection Request Cards (pending/expired only) */}
-                  {(() => {
-                    const connectionRequests = connectionAttempts.filter((attempt) => 
-                      attempt.status === "pending"
-                    )
+                  {/* Connection Request Cards (pending/expired only) - Only show when connectionRequests=true */}
+                  {showConnectionRequests && (() => {
+                    // Always show both cards - get from connectionAttempts or use defaults
+                    const janeCard1 = connectionAttempts.find(a => a.email.toLowerCase() === "jane.doe@hudl.com") || {
+                      id: "jane-doe-1",
+                      email: "jane.doe@hudl.com",
+                      name: "Jane Doe",
+                      status: "pending",
+                      requestedDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                    }
+                    const janeCard2 = connectionAttempts.find(a => a.email.toLowerCase() === "jane.doe@hudl.com") || {
+                      id: "jane-doe-2",
+                      email: "jane.doe@hudl.com",
+                      name: "Jane Doe",
+                      status: "pending",
+                      requestedDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                    }
                     
-                    if (connectionRequests.length === 0) return null
+                    const firstRequest = janeCard1
+                    const secondRequest = janeCard2
                     
                     return (
-                      <div className="flex flex-col gap-2 items-start relative shrink-0 w-full mt-3">
+                      <div className="flex flex-col gap-2 items-start relative shrink-0 w-full mt-1">
                         <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#c0c6cd] text-[16px] font-medium w-full mb-2">
                           <p className="leading-[1.15]">Connection Requests</p>
                         </div>
-                        {connectionRequests.map((attempt) => {
-                      const isExpired = attempt.email.toLowerCase() === "hayden.ohmes@hudl.com"
-                      const statusBadge = getStatusBadge(attempt.status, attempt.email)
-                      const StatusIcon = statusBadge.icon
-                      return (
-                        <div
-                          key={attempt.id}
-                          className={`bg-[#21262b] border flex flex-col gap-3 items-start px-4 py-3 relative rounded-[4px] shrink-0 w-full ${
-                            isExpired 
-                              ? "border-[#ff8c00]" 
-                              : "border-[#42474c]"
-                          }`}
-                        >
-                          <div className="flex gap-3 items-center relative shrink-0 w-full">
-                            <div className="basis-0 flex flex-col gap-1 grow items-start min-h-px min-w-px relative shrink-0">
-                              <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#fefefe] text-[16px] w-full">
-                                <p className="leading-[1.4]">{attempt.email}</p>
-                              </div>
-                              {attempt.status === "pending" && (
-                                <button
-                                  onClick={() => handleResendAttempt(attempt.email)}
-                                  className="flex items-center gap-1 text-[#c0c6cd] hover:text-[#85909e] text-[14px] transition-colors mt-0.5"
-                                >
-                                  Resend Code
-                                  <ArrowRight className="size-3" />
-                                </button>
-                              )}
-                            </div>
-                            <div className="ml-auto flex gap-2 items-center justify-end relative shrink-0">
-                              {isExpired ? (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="flex items-center gap-2 cursor-help justify-end mr-3">
-                                      <StatusIcon className={`size-4 ${statusBadge.color}`} />
-                                      <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[14px]">
-                                        <p className={`leading-[1.4] ${statusBadge.color}`}>{statusBadge.text}</p>
-                                      </div>
+                        
+                        {/* First Card - Always show */}
+                        {(() => {
+                          const statusBadge = getStatusBadge(firstRequest.status, firstRequest.email)
+                          return (
+                            <div className="bg-[#21262b] border border-[#42474c] flex flex-col gap-3 items-start px-4 py-3 relative rounded-[4px] shrink-0 w-full">
+                              <div className="flex gap-3 items-center relative shrink-0 w-full">
+                                <div className="basis-0 flex flex-col gap-1 grow items-start min-h-px min-w-px relative shrink-0">
+                                  <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#fefefe] text-[16px] w-full">
+                                    <p className="leading-[1.4]">{firstRequest.email}</p>
+                                  </div>
+                                  <button
+                                    onClick={() => handleResendAttempt(firstRequest.email)}
+                                    className="flex items-center gap-1 text-[#c0c6cd] hover:text-[#85909e] text-[14px] transition-colors mt-0.5"
+                                  >
+                                    Resend Code
+                                    <ArrowRight className="size-3" />
+                                  </button>
+                                </div>
+                                <div className="ml-auto flex gap-2 items-center justify-end relative shrink-0">
+                                  <button
+                                    onClick={() => {
+                                      setEmail(firstRequest.email)
+                                      setMode("connect")
+                                      setConnectStep("verification")
+                                    }}
+                                    className="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded hover:bg-[#2a2f35] hover:text-[#fefefe] transition-colors text-[#c0c6cd] text-[14px] justify-end"
+                                  >
+                                    <div className="flex flex-col justify-center leading-[0] relative shrink-0">
+                                      <p className="leading-[1.4]">Enter Code</p>
                                     </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Code expired-please resend</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              ) : attempt.status === "pending" ? (
-                                <button
-                                  onClick={() => {
-                                    setEmail(attempt.email)
-                                    setMode("connect")
-                                    setConnectStep("verification")
-                                  }}
-                                  className="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded hover:bg-[#2a2f35] hover:text-[#fefefe] transition-colors text-[#c0c6cd] text-[14px] justify-end"
-                                >
-                                  <div className="flex flex-col justify-center leading-[0] relative shrink-0">
-                                    <p className="leading-[1.4]">{statusBadge.text}</p>
-                                  </div>
-                                </button>
-                              ) : (
-                                <>
-                                  <StatusIcon className={`size-4 ${statusBadge.color}`} />
-                                  <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#c0c6cd] text-[14px]">
-                                    <p className="leading-[1.4]">{statusBadge.text}</p>
-                                  </div>
-                                </>
-                              )}
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      )
-                        })}
+                          )
+                        })()}
+                        {/* Second Card - Expired State - Always show */}
+                        {(() => {
+                          const isExpired = secondRequest.email.toLowerCase() === "jane.doe@hudl.com"
+                          const statusBadge = getStatusBadge(secondRequest.status, secondRequest.email)
+                          const StatusIcon = statusBadge.icon
+                          return (
+                            <div
+                              key={secondRequest.id}
+                              className={`bg-[#21262b] border flex flex-col gap-3 items-start px-4 py-3 relative rounded-[4px] shrink-0 w-full ${
+                                isExpired 
+                                  ? "border-[#ff8c00]" 
+                                  : "border-[#42474c]"
+                              }`}
+                            >
+                              <div className="flex gap-3 items-center relative shrink-0 w-full">
+                                <div className="basis-0 flex flex-col gap-1 grow items-start min-h-px min-w-px relative shrink-0">
+                                  <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#fefefe] text-[16px] w-full">
+                                    <p className="leading-[1.4]">{secondRequest.email}</p>
+                                  </div>
+                                  {isExpired && (
+                                    <button
+                                      onClick={() => handleResendAttempt(secondRequest.email)}
+                                      className="flex items-center gap-1 text-[#c0c6cd] hover:text-[#85909e] text-[14px] transition-colors mt-0.5"
+                                    >
+                                      Resend Code
+                                      <ArrowRight className="size-3" />
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="ml-auto flex gap-2 items-center justify-end relative shrink-0">
+                                  {isExpired ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="flex items-center gap-2 cursor-help justify-end mr-3">
+                                          <StatusIcon className={`size-4 ${statusBadge.color}`} />
+                                          <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[14px]">
+                                            <p className={`leading-[1.4] ${statusBadge.color}`}>{statusBadge.text}</p>
+                                          </div>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Code expired-please resend</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <button
+                                      onClick={() => {
+                                        setEmail(secondRequest.email)
+                                        setMode("connect")
+                                        setConnectStep("verification")
+                                      }}
+                                      className="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded hover:bg-[#2a2f35] hover:text-[#fefefe] transition-colors text-[#c0c6cd] text-[14px] justify-end"
+                                    >
+                                      <div className="flex flex-col justify-center leading-[0] relative shrink-0">
+                                        <p className="leading-[1.4]">Enter Code</p>
+                                      </div>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })()}
                       </div>
                     )
                   })()}
