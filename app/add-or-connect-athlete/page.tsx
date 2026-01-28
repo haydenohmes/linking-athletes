@@ -42,18 +42,41 @@ export default function AddOrConnectAthletePage() {
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search)
+      const fromProgram = urlParams.get("from") === "program"
       const urlMode = urlParams.get("mode")
-      if (urlMode === "add") {
-        setMode("add")
-      } else if (urlMode === "connect") {
-        setMode("connect")
-        // Check localStorage for email to determine if we should go to verification step
-        const connectEmail = localStorage.getItem("connectEmail")
-        if (connectEmail) {
-          setEmail(connectEmail)
-          setConnectStep("verification")
+      
+      // If coming from program page, ensure we skip auth
+      if (fromProgram) {
+        if (urlMode === "add") {
+          setMode("add")
+        } else if (urlMode === "connect") {
+          setMode("connect")
+          // Check localStorage for email to determine if we should go to verification step
+          const connectEmail = localStorage.getItem("connectEmail")
+          if (connectEmail) {
+            setEmail(connectEmail)
+            setConnectStep("verification")
+          } else {
+            setConnectStep("send-link")
+          }
         } else {
-          setConnectStep("send-link")
+          // No mode specified, go to selection screen
+          setMode("selection")
+        }
+      } else {
+        // Not from program page, handle mode if specified
+        if (urlMode === "add") {
+          setMode("add")
+        } else if (urlMode === "connect") {
+          setMode("connect")
+          // Check localStorage for email to determine if we should go to verification step
+          const connectEmail = localStorage.getItem("connectEmail")
+          if (connectEmail) {
+            setEmail(connectEmail)
+            setConnectStep("verification")
+          } else {
+            setConnectStep("send-link")
+          }
         }
       }
     }
