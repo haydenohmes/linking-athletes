@@ -7,8 +7,8 @@ export default function HomePage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Redirect to program page on mount
-    router.push("/program")
+    // Redirect to add-or-connect-athlete page on mount (first page in flow)
+    router.push("/add-or-connect-athlete")
   }, [router])
 
   return (

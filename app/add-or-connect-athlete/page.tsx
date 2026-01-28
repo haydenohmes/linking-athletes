@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { Calendar, X, Plus, CheckCircle2, Loader2, Info, Clock, ArrowRight, ArrowLeft, AlertTriangle } from "lucide-react"
@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-type PageMode = "selection" | "add" | "connect"
+type PageMode = "auth" | "selection" | "add" | "connect"
 type ConnectStep = "send-link" | "verification" | "connected"
 
 export default function AddOrConnectAthletePage() {
@@ -35,24 +35,8 @@ export default function AddOrConnectAthletePage() {
   // Get connection requests variant from query parameter
   const showConnectionRequests = searchParams.get("connectionRequests") === "true"
 
-  // Both versions redirect to program page first
-  React.useEffect(() => {
-    // Only redirect if we're not already coming from program page navigation
-    // Check if there's a referrer or if this is a direct navigation
-    // Don't redirect if display=avatars parameter is set (user wants to see avatars on this page)
-    // Don't redirect if mode=add is specified (user wants to go directly to add form)
-    const urlParams = new URLSearchParams(window.location.search)
-    const urlMode = urlParams.get("mode")
-    const shouldRedirect = !window.location.search.includes("from=program") && displayMode === "cards" && urlMode !== "add" && !showConnectionRequests
-    if (shouldRedirect) {
-      const params = new URLSearchParams()
-      if (version !== "1") params.set("version", version)
-      if (displayMode === "avatars") params.set("display", "avatars")
-      if (showConnectionRequests) params.set("connectionRequests", "true")
-      const queryString = params.toString() ? `?${params.toString()}` : ""
-      router.push(`/program${queryString}`)
-    }
-  }, [version, router, displayMode])
+  // Redirect logic removed for happy path user testing
+  // Users should land on create account page when visiting /add-or-connect-athlete
 
   // Handle mode parameter from URL
   React.useEffect(() => {
@@ -61,6 +45,16 @@ export default function AddOrConnectAthletePage() {
       const urlMode = urlParams.get("mode")
       if (urlMode === "add") {
         setMode("add")
+      } else if (urlMode === "connect") {
+        setMode("connect")
+        // Check localStorage for email to determine if we should go to verification step
+        const connectEmail = localStorage.getItem("connectEmail")
+        if (connectEmail) {
+          setEmail(connectEmail)
+          setConnectStep("verification")
+        } else {
+          setConnectStep("send-link")
+        }
       }
     }
   }, [])
@@ -70,22 +64,52 @@ export default function AddOrConnectAthletePage() {
     version === "2" ? "add" : "connect"
   )
 
-  // Page mode state - version 2 starts at add form, version 1 starts at selection
-  // Load from localStorage to persist on refresh
+  // Auth state
+  const [isLoginMode, setIsLoginMode] = React.useState(false)
+  const [authFirstName, setAuthFirstName] = React.useState("")
+  const [authLastName, setAuthLastName] = React.useState("")
+  const [authEmail, setAuthEmail] = React.useState("")
+  const [authPassword, setAuthPassword] = React.useState("")
+
+  // Page mode state - starts with auth as the first step
   const [mode, setMode] = React.useState<PageMode>(() => {
     if (typeof window !== "undefined") {
-      // Check if mode is specified in URL
       const urlParams = new URLSearchParams(window.location.search)
-      const urlMode = urlParams.get("mode")
-      if (urlMode === "add") {
-        return "add"
+      // If coming from program page, skip auth and go to selection/add/connect flows
+      const fromProgram = urlParams.get("from") === "program"
+      if (fromProgram) {
+        // Check if mode is specified in URL
+        const urlMode = urlParams.get("mode")
+        if (urlMode === "add") {
+          return "add"
+        }
+        if (urlMode === "connect") {
+          return "connect"
+        }
+        const saved = localStorage.getItem("addOrConnectMode")
+        if (saved && (saved === "selection" || saved === "add" || saved === "connect")) {
+          return saved as PageMode
+        }
+        return version === "2" ? "add" : "selection"
       }
-      const saved = localStorage.getItem("addOrConnectMode")
-      if (saved && (saved === "selection" || saved === "add" || saved === "connect")) {
-        return saved as PageMode
+      
+      // Check if authenticated (skip auth if already done)
+      const authenticated = localStorage.getItem("isAuthenticated") === "true"
+      if (authenticated) {
+        // Check if mode is specified in URL
+        const urlMode = urlParams.get("mode")
+        if (urlMode === "add") {
+          return "add"
+        }
+        const saved = localStorage.getItem("addOrConnectMode")
+        if (saved && (saved === "selection" || saved === "add" || saved === "connect")) {
+          return saved as PageMode
+        }
+        return version === "2" ? "add" : "selection"
       }
     }
-    return version === "2" ? "add" : "selection"
+    // Default to auth as the first step
+    return "auth"
   })
   const [connectStep, setConnectStep] = React.useState<ConnectStep>(() => {
     if (typeof window !== "undefined") {
@@ -100,26 +124,59 @@ export default function AddOrConnectAthletePage() {
   // Add athlete form state
   const [firstName, setFirstName] = React.useState(() => {
     if (typeof window !== "undefined") {
+      // First check for stored firstName
+      const storedFirstName = localStorage.getItem("addAthleteFirstName")
+      if (storedFirstName) {
+        return storedFirstName
+      }
+      // Then check for full name
       const storedName = localStorage.getItem("addAthleteName")
       if (storedName) {
         const nameParts = storedName.trim().split(" ")
         return nameParts[0] || ""
+      }
+      // Finally check for connected athlete
+      const saved = localStorage.getItem("addOrConnectAthlete")
+      if (saved) {
+        try {
+          const athlete = JSON.parse(saved)
+          if (athlete && athlete.name) {
+            const nameParts = athlete.name.trim().split(" ")
+            return nameParts[0] || ""
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
       }
     }
     return ""
   })
   const [lastName, setLastName] = React.useState(() => {
     if (typeof window !== "undefined") {
+      // First check for stored lastName
+      const storedLastName = localStorage.getItem("addAthleteLastName")
+      if (storedLastName) {
+        return storedLastName
+      }
+      // Then check for full name
       const storedName = localStorage.getItem("addAthleteName")
       if (storedName) {
         const nameParts = storedName.trim().split(" ")
         // Get everything after the first name as last name
         return nameParts.slice(1).join(" ") || ""
       }
-      // Also check for separately stored firstName/lastName
-      const storedLastName = localStorage.getItem("addAthleteLastName")
-      if (storedLastName) {
-        return storedLastName
+      // Finally check for connected athlete
+      const saved = localStorage.getItem("addOrConnectAthlete")
+      if (saved) {
+        try {
+          const athlete = JSON.parse(saved)
+          if (athlete && athlete.name) {
+            const nameParts = athlete.name.trim().split(" ")
+            return nameParts.slice(1).join(" ") || ""
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
       }
     }
     return ""
@@ -128,6 +185,7 @@ export default function AddOrConnectAthletePage() {
   // Update form fields when mode changes to "add" and athlete name is stored
   React.useEffect(() => {
     if (mode === "add" && typeof window !== "undefined") {
+      // First check for stored firstName/lastName
       const storedFirstName = localStorage.getItem("addAthleteFirstName")
       const storedLastName = localStorage.getItem("addAthleteLastName")
       if (storedFirstName) {
@@ -135,6 +193,24 @@ export default function AddOrConnectAthletePage() {
       }
       if (storedLastName) {
         setLastName(storedLastName)
+      }
+      // If no stored names, check for connected athlete
+      if (!storedFirstName && !storedLastName) {
+        const saved = localStorage.getItem("addOrConnectAthlete")
+        if (saved) {
+          try {
+            const athlete = JSON.parse(saved)
+            if (athlete && athlete.name) {
+              const nameParts = athlete.name.trim().split(" ")
+              const first = nameParts[0] || ""
+              const last = nameParts.slice(1).join(" ") || ""
+              if (first) setFirstName(first)
+              if (last) setLastName(last)
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
       }
     }
   }, [mode])
@@ -147,6 +223,17 @@ export default function AddOrConnectAthletePage() {
   // Connect flow state - load from localStorage to persist on refresh
   const [email, setEmail] = React.useState(() => {
     if (typeof window !== "undefined") {
+      // Only read connectEmail if we're explicitly in connect mode (from URL parameter)
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlMode = urlParams.get("mode")
+      if (urlMode === "connect") {
+        // Check for connectEmail first (set from program page connection request cards), then fallback to addOrConnectEmail
+        const connectEmail = localStorage.getItem("connectEmail")
+        if (connectEmail) {
+          localStorage.removeItem("connectEmail") // Clear it after reading
+          return connectEmail
+        }
+      }
       return localStorage.getItem("addOrConnectEmail") || ""
     }
     return ""
@@ -194,8 +281,30 @@ export default function AddOrConnectAthletePage() {
     }
     return null
   })
+  const [newlyConnectedAthlete, setNewlyConnectedAthlete] = React.useState<{name: string, email: string, isNew: boolean} | null>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("newlyConnectedAthlete")
+      if (stored) {
+        try {
+          const athlete = JSON.parse(stored)
+          // Clear it after reading so it only shows once
+          localStorage.removeItem("newlyConnectedAthlete")
+          return athlete
+        } catch (e) {
+          return null
+        }
+      }
+    }
+    return null
+  })
   const inputRefs = React.useRef<(HTMLInputElement | null)[]>([])
   const [connectionAttempts, setConnectionAttempts] = React.useState<Array<{id: string, email: string, name: string, status: string, requestedDate: string}>>([])
+  const [fromConnectedPage, setFromConnectedPage] = React.useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("fromConnectedPage") === "true"
+    }
+    return false
+  })
   const [showCancelDialog, setShowCancelDialog] = React.useState(false)
   const [athleteToCancel, setAthleteToCancel] = React.useState<string | null>(null)
 
@@ -250,10 +359,10 @@ export default function AddOrConnectAthletePage() {
     
     // Save to localStorage to persist
     if (typeof window !== "undefined") {
-      localStorage.setItem("connectionAttempts", JSON.stringify(filteredAttempts))
+      localStorage.setItem("connectionAttempts", JSON.stringify(allAttempts))
     }
     
-    setConnectionAttempts(filteredAttempts)
+    setConnectionAttempts(allAttempts)
   }, [])
 
   // Keep version parameter in URL when navigating
@@ -314,6 +423,28 @@ export default function AddOrConnectAthletePage() {
     setSelectedOption(option)
   }
 
+  const handleAuthContinue = () => {
+    // Mark as authenticated and navigate to program page
+    if (typeof window !== "undefined") {
+      localStorage.setItem("isAuthenticated", "true")
+    }
+    const params = new URLSearchParams()
+    if (version !== "1") params.set("version", version)
+    if (displayMode === "avatars") params.set("display", "avatars")
+    if (showConnectionRequests) params.set("connectionRequests", "true")
+    const queryString = params.toString() ? `?${params.toString()}` : ""
+    router.push(`/program${queryString}`)
+  }
+
+  const handleToggleAuthMode = () => {
+    setIsLoginMode(!isLoginMode)
+    // Clear form fields when switching modes
+    setAuthFirstName("")
+    setAuthLastName("")
+    setAuthEmail("")
+    setAuthPassword("")
+  }
+
   const handleContinue = () => {
     if (selectedOption === "connect") {
       setMode("connect")
@@ -324,6 +455,13 @@ export default function AddOrConnectAthletePage() {
   }
 
   const handleBackToSelection = () => {
+    // Check if we should go back to auth instead of selection
+    const authenticated = typeof window !== "undefined" && localStorage.getItem("isAuthenticated") === "true"
+    if (!authenticated) {
+      // If not authenticated, go to auth page
+      setMode("auth")
+      return
+    }
     setMode("selection")
     setConnectStep("send-link")
     setEmail("")
@@ -348,21 +486,30 @@ export default function AddOrConnectAthletePage() {
   }
 
   const handleBack = () => {
-    if (mode === "selection") {
-      // From selection screen, go back to program page
-      const params = new URLSearchParams()
-      if (version !== "1") params.set("version", version)
-      if (displayMode === "avatars") params.set("display", "avatars")
-      if (showConnectionRequests) params.set("connectionRequests", "true")
-      const queryString = params.toString() ? `?${params.toString()}` : ""
-      router.push(`/program${queryString}`)
+    // Check if we're on verification step
+    if (connectStep === "verification") {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("addOrConnectStep", "send-link")
+      }
+      setConnectStep("send-link")
+      return
+    }
+    
+    if (mode === "auth") {
+      // From auth screen, this is the root - don't go back further
+      // Stay on auth page (create account is the starting point)
+      return
+    } else if (mode === "selection") {
+      // From selection screen, go back to auth (create account page)
+      setMode("auth")
+      // Clear authentication so they can see the auth screen
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("isAuthenticated")
+      }
     } else if (mode === "connect") {
-      if (connectStep === "verification") {
-        setConnectStep("send-link")
-      } else if (connectStep === "send-link") {
+      if (connectStep === "send-link") {
         handleBackToSelection()
       } else if (connectStep === "connected") {
-        // From connected state, go back to selection
         handleBackToSelection()
       }
     } else if (mode === "add") {
@@ -371,22 +518,69 @@ export default function AddOrConnectAthletePage() {
   }
 
   const canGoBack = () => {
-    // Show back button on all screens
+    // Hide back button on auth page (it's the root/starting point)
+    if (mode === "auth") {
+      return false
+    }
+    // Show back button on all other screens
     return true
   }
 
   // Add athlete form handlers
   const handleFinish = () => {
-    // TODO: Handle form submission
+    // Save the completed athlete to localStorage
+    if (typeof window !== "undefined" && firstName && lastName) {
+      const athleteName = `${firstName} ${lastName}`
+      const athleteData = {
+        id: `athlete-${Date.now()}`,
+        name: athleteName,
+        firstName: firstName,
+        lastName: lastName,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
+        grade: grade,
+        graduationYear: graduationYear,
+        isGuardian: isGuardian,
+        completedAt: new Date().toISOString()
+      }
+      
+      // Get existing athletes
+      const existingAthletes = localStorage.getItem("completedAthletes")
+      let athletes: Array<typeof athleteData> = []
+      if (existingAthletes) {
+        try {
+          athletes = JSON.parse(existingAthletes)
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+      
+      // Add new athlete (avoid duplicates by checking name)
+      const existingIndex = athletes.findIndex(a => 
+        a.firstName === firstName && a.lastName === lastName
+      )
+      if (existingIndex >= 0) {
+        athletes[existingIndex] = athleteData
+      } else {
+        athletes.push(athleteData)
+      }
+      
+      localStorage.setItem("completedAthletes", JSON.stringify(athletes))
+    }
+    
     // Clear localStorage state when finishing
     if (typeof window !== "undefined") {
       localStorage.removeItem("addOrConnectMode")
       localStorage.removeItem("addOrConnectStep")
+      localStorage.removeItem("fromConnectedPage")
       localStorage.removeItem("addOrConnectEmail")
       localStorage.removeItem("addOrConnectCode")
       localStorage.removeItem("addOrConnectConnected")
       localStorage.removeItem("addOrConnectAthlete")
       localStorage.removeItem("addAthleteName")
+      localStorage.removeItem("addAthleteFirstName")
+      localStorage.removeItem("addAthleteLastName")
+      setFromConnectedPage(false)
     }
     const params = new URLSearchParams()
     if (version !== "1") params.set("version", version)
@@ -617,6 +811,8 @@ export default function AddOrConnectAthletePage() {
         localStorage.removeItem("addOrConnectCode")
         localStorage.removeItem("addOrConnectConnected")
         localStorage.removeItem("addOrConnectAthlete")
+        localStorage.removeItem("fromConnectedPage")
+        setFromConnectedPage(false)
       }
       router.push("/program")
     }
@@ -680,8 +876,8 @@ export default function AddOrConnectAthletePage() {
   const isCodeComplete = code.every(digit => digit !== "")
 
   // Determine card width based on mode
-  const cardWidth = mode === "add" ? "w-[480px]" : "w-[500px]"
-  const cardMaxWidth = mode === "add" ? "max-w-[480px]" : "max-w-[500px]"
+  const cardWidth = mode === "add" ? "w-[480px]" : mode === "auth" ? "w-[400px]" : "w-[500px]"
+  const cardMaxWidth = mode === "add" ? "max-w-[480px]" : mode === "auth" ? "max-w-[400px]" : "max-w-[500px]"
   const containerPadding = mode === "add" ? "px-20" : "px-6"
 
   return (
@@ -691,13 +887,121 @@ export default function AddOrConnectAthletePage() {
           <div className={`${mode === "add" ? "bg-[#161b20]" : "bg-[#191f24]"} flex flex-col gap-6 items-center relative rounded-[12px] shrink-0 ${cardMaxWidth} ${cardWidth}`}>
             {/* Content Section */}
             <div className="flex flex-col gap-8 items-center pb-[60px] pt-10 px-10 relative shrink-0 w-full">
+              {/* Auth Mode */}
+              {mode === "auth" && (
+                <>
+                  {/* Header */}
+                  <div className="flex flex-col font-['Barlow',sans-serif] font-medium justify-center leading-[0] relative shrink-0 text-[#fefefe] text-[24px] text-center tracking-[0px] w-full">
+                    <p className="leading-[1.2]">{isLoginMode ? "Log In" : "Create Account"}</p>
+                  </div>
+
+                  {/* Alert Banner */}
+                  <div className="bg-[#282c34] border border-[#42474c] rounded-[4px] px-4 py-3 w-full flex items-center gap-2 mb-0">
+                    <Info className="size-4 text-[#c0c6cd] shrink-0" />
+                    <p className="text-[#c0c6cd] text-[14px] leading-[1.4] font-['Barlow',sans-serif] text-left">
+                      Create an account or login to register your athlete
+                    </p>
+                  </div>
+
+                  {/* Form Fields */}
+                  <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full -mt-2">
+                    {!isLoginMode ? (
+                      <>
+                        {/* First Name */}
+                        <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
+                          <Input
+                            type="text"
+                            placeholder="First Name*"
+                            value={authFirstName}
+                            onChange={(e) => setAuthFirstName(e.target.value)}
+                            className="bg-white border border-[#42474c] text-[#0f1215] text-[18px] placeholder:text-[#85909e] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#42474c] h-[48px] min-h-[48px] px-[16px] rounded-[2px] font-['Barlow',sans-serif]"
+                          />
+                        </div>
+
+                        {/* Last Name */}
+                        <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
+                          <Input
+                            type="text"
+                            placeholder="Last Name*"
+                            value={authLastName}
+                            onChange={(e) => setAuthLastName(e.target.value)}
+                            className="bg-white border border-[#42474c] text-[#0f1215] text-[18px] placeholder:text-[#85909e] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#42474c] h-[48px] min-h-[48px] px-[16px] rounded-[2px] font-['Barlow',sans-serif]"
+                          />
+                        </div>
+                      </>
+                    ) : null}
+
+                    {/* Email */}
+                    <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
+                      <Input
+                        type="email"
+                        placeholder="Email*"
+                        value={authEmail}
+                        onChange={(e) => setAuthEmail(e.target.value)}
+                        className="bg-white border border-[#42474c] text-[#0f1215] text-[18px] placeholder:text-[#85909e] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#42474c] h-[48px] min-h-[48px] px-[16px] rounded-[2px] font-['Barlow',sans-serif]"
+                      />
+                    </div>
+
+                    {/* Password - Only show in login mode */}
+                    {isLoginMode && (
+                      <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-full">
+                        <Input
+                          type="password"
+                          placeholder="Password*"
+                          value={authPassword}
+                          onChange={(e) => setAuthPassword(e.target.value)}
+                          className="bg-white border border-[#42474c] text-[#0f1215] text-[18px] placeholder:text-[#85909e] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#42474c] h-[48px] min-h-[48px] px-[16px] rounded-[2px] font-['Barlow',sans-serif]"
+                        />
+                      </div>
+                    )}
+
+                    {/* Continue/Log In Button and Toggle Link */}
+                    <div className="content-stretch flex flex-col gap-[12px] items-start relative shrink-0 w-full">
+                      <Button
+                        onClick={handleAuthContinue}
+                        variant="default"
+                        size="lg"
+                        className="w-full bg-[#3370f4] hover:bg-[#2a5dd9] text-white font-medium font-['Barlow',sans-serif]"
+                      >
+                        {isLoginMode ? "Log In" : "Continue"}
+                      </Button>
+                      <div className="flex flex-col font-['Barlow',sans-serif] font-medium justify-center leading-[0] relative shrink-0 text-[#c0c6cd] text-[14px] tracking-[0px] w-full text-center">
+                        <p className="leading-[1.4]">
+                          {isLoginMode ? (
+                            <>
+                              <span>Don't have an account? </span>
+                              <button
+                                onClick={handleToggleAuthMode}
+                                className="text-[#0a93f5] hover:underline cursor-pointer font-['Barlow',sans-serif]"
+                              >
+                                Create Account
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <span>Already have an account? </span>
+                              <button
+                                onClick={handleToggleAuthMode}
+                                className="text-[#0a93f5] hover:underline cursor-pointer font-['Barlow',sans-serif]"
+                              >
+                                Log In
+                              </button>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* Selection Mode */}
               {mode === "selection" && (
                 <>
                   {/* Header Text */}
                   <div className="flex flex-col gap-1 items-center leading-[0] relative shrink-0 text-center tracking-[0px] w-full font-medium">
                     <div className="flex flex-col justify-center relative shrink-0 text-[#fefefe] text-[24px] w-full">
-                      <p className="leading-[1.2]">Add or Connect Athlete</p>
+                      <p className="leading-[1.2]">Add or Connect to Hudl Athlete</p>
                     </div>
                     <div className="flex flex-col justify-center relative shrink-0 text-[#c0c6cd] text-[14px] w-full">
                       <p className="leading-[1.4]">Link to an existing athlete account or add a new athlete to get started.</p>
@@ -719,7 +1023,7 @@ export default function AddOrConnectAthletePage() {
                           <p className={`leading-[1.4] overflow-ellipsis overflow-hidden text-[16px] ${
                             selectedOption === "connect" ? "text-[#fefefe]" : "text-[#85909e]"
                           }`}>
-                            Connect to Existing Athlete
+                            Connect to Existing Hudl Athlete
                           </p>
                         </div>
                       </button>
@@ -763,40 +1067,6 @@ export default function AddOrConnectAthletePage() {
                     </div>
                   </div>
 
-                  {/* Athletes Status Module - Show for version 1 or connectionRequests version */}
-                  {(version === "1" || showConnectionRequests) && connectionAttempts.length > 0 && (
-                    <div className="flex flex-col gap-4 items-start relative shrink-0 w-full">
-                      <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#c0c6cd] text-[16px] font-medium w-full">
-                        <p className="leading-[1.15]">My Athletes</p>
-                      </div>
-                      
-                      {/* Connected Athletes as Avatars */}
-                      {connectionAttempts.filter(attempt => attempt.status === "connected").length > 0 && (
-                        <div className="flex gap-1 items-center relative shrink-0 w-full mb-2">
-                          <div className="flex gap-2 items-center relative shrink-0">
-                            {connectionAttempts
-                              .filter(attempt => attempt.status === "connected")
-                              .map((attempt) => (
-                                <Tooltip key={attempt.id}>
-                                  <TooltipTrigger asChild>
-                                    <div className="cursor-pointer">
-                                      <Avatar className="size-[32px]">
-                                        <AvatarFallback className="bg-[#38434f] text-white text-[12px] font-bold border border-[#fefefe]">
-                                          {attempt.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{attempt.name}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </>
               )}
 
@@ -806,7 +1076,9 @@ export default function AddOrConnectAthletePage() {
                   {/* Header Text */}
                   <div className="flex flex-col gap-1 items-center leading-[0] relative shrink-0 text-center tracking-[0px] w-full font-medium">
                     <div className="flex flex-col justify-center relative shrink-0 text-[#fefefe] text-[24px] w-full">
-                      <p className="leading-[1.2]">Add Your Athletes</p>
+                      <p className="leading-[1.2]">
+                        {fromConnectedPage ? "Complete Athlete Information" : "Add Your Athletes"}
+                      </p>
                     </div>
                     <div className="flex flex-col justify-center relative shrink-0 text-[#c0c6cd] text-[14px] w-full">
                       <p className="leading-[1.4]">Add your athlete's information so we can match them to the programs for which they are eligible.</p>
@@ -820,11 +1092,19 @@ export default function AddOrConnectAthletePage() {
                       <div className="basis-0 flex gap-2 grow items-center min-h-px min-w-px relative shrink-0">
                         <Avatar className="size-8 shrink-0">
                           <AvatarFallback className="bg-[#38434f] text-white text-[12px] font-bold">
-                            {firstName && lastName ? `${firstName[0]}${lastName[0]}` : "CD"}
+                            {(firstName?.trim() || lastName?.trim())
+                              ? `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "CD"
+                              : connectedAthlete?.name 
+                                ? connectedAthlete.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+                                : "CD"}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#c0c6cd] text-[16px]">
-                          <p className="leading-[1.15]">{firstName && lastName ? `${firstName} ${lastName}` : "John Doe"}</p>
+                          <p className="leading-[1.15]">
+                            {(firstName?.trim() || lastName?.trim())
+                              ? `${firstName || ""} ${lastName || ""}`.trim()
+                              : connectedAthlete?.name || "John Doe"}
+                          </p>
                         </div>
                       </div>
                       <Button
@@ -850,9 +1130,8 @@ export default function AddOrConnectAthletePage() {
                             type="text"
                             value={firstName}
                             onChange={(e) => setFirstName(e.target.value)}
-                            className="bg-black border border-[#42474c] min-h-[40px] rounded-[2px] text-[16px] text-white placeholder:text-[#85909e] px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#0273e3] focus:ring-offset-0"
+                            className="bg-white border border-[#42474c] min-h-[40px] rounded-[2px] text-[16px] placeholder:text-[#85909e] px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#0273e3] focus:ring-offset-0"
                             placeholder="First Name"
-                            style={{ backgroundColor: "black", color: "white" }}
                           />
                         </div>
                         <div className="basis-0 flex flex-col gap-1 grow items-start min-h-px min-w-px relative shrink-0">
@@ -864,9 +1143,8 @@ export default function AddOrConnectAthletePage() {
                             type="text"
                             value={lastName}
                             onChange={(e) => setLastName(e.target.value)}
-                            className="bg-black border border-[#42474c] min-h-[40px] rounded-[2px] text-[16px] text-white placeholder:text-[#85909e] px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#0273e3] focus:ring-offset-0"
+                            className="bg-white border border-[#42474c] min-h-[40px] rounded-[2px] text-[16px] placeholder:text-[#85909e] px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#0273e3] focus:ring-offset-0"
                             placeholder="Last Name"
-                            style={{ backgroundColor: "black", color: "white" }}
                           />
                         </div>
                       </div>
@@ -878,17 +1156,13 @@ export default function AddOrConnectAthletePage() {
                             <p className="relative shrink-0 text-[#c0c6cd]">Date of Birth</p>
                             <p className="relative shrink-0 text-[#ff563f]">*</p>
                           </div>
-                          <div className="bg-black border border-[#42474c] flex items-center min-h-[40px] px-4 py-0 relative rounded-[2px] shrink-0 w-full" style={{ backgroundColor: "black" }}>
-                            <input
-                              type="text"
-                              value={dateOfBirth}
-                              onChange={(e) => setDateOfBirth(e.target.value)}
-                              className="bg-transparent border-0 p-0 text-[16px] text-white placeholder:text-[#85909e] focus:outline-none flex-1"
-                              placeholder="MM/DD/YYYY"
-                              style={{ backgroundColor: "transparent", color: "white" }}
-                            />
-                            {version !== "1" && <Calendar className="size-4 text-white shrink-0 ml-2" />}
-                          </div>
+                          <input
+                            type="text"
+                            value={dateOfBirth}
+                            onChange={(e) => setDateOfBirth(e.target.value)}
+                            className="bg-white border border-[#42474c] min-h-[40px] rounded-[2px] text-[16px] placeholder:text-[#85909e] px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#0273e3] focus:ring-offset-0"
+                            placeholder="MM/DD/YYYY"
+                          />
                         </div>
                         <div className="basis-0 flex flex-col gap-1 grow items-start min-h-px min-w-px relative shrink-0">
                           <div className="flex gap-1 items-start leading-none relative shrink-0 text-[16px] text-nowrap w-full">
@@ -896,14 +1170,14 @@ export default function AddOrConnectAthletePage() {
                             <p className="relative shrink-0 text-[#ff563f]">*</p>
                           </div>
                           <Select value={gender} onValueChange={setGender}>
-                            <SelectTrigger className="bg-black border border-[#42474c] min-h-[40px] rounded-[2px] text-[16px] text-white [&>svg]:text-white" style={{ backgroundColor: "black", color: "white" }}>
-                              <SelectValue placeholder="Select Gender" className="text-white" />
+                            <SelectTrigger className="bg-white border border-[#42474c] min-h-[40px] rounded-[2px] text-[16px] [&>svg]:text-gray-600">
+                              <SelectValue placeholder="Select Gender" />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#161b20] border border-[#42474c] text-white">
-                              <SelectItem value="Male" className="text-white">Male</SelectItem>
-                              <SelectItem value="Female" className="text-white">Female</SelectItem>
-                              <SelectItem value="Other" className="text-white">Other</SelectItem>
-                              <SelectItem value="Prefer not to say" className="text-white">Prefer not to say</SelectItem>
+                            <SelectContent className="bg-white border border-[#42474c]">
+                              <SelectItem value="Male">Male</SelectItem>
+                              <SelectItem value="Female">Female</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                              <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -917,23 +1191,23 @@ export default function AddOrConnectAthletePage() {
                             <p className="relative shrink-0 text-[#ff563f]">*</p>
                           </div>
                           <Select value={grade} onValueChange={setGrade}>
-                            <SelectTrigger className="bg-black border border-[#42474c] min-h-[40px] rounded-[2px] text-[16px] text-white [&>svg]:text-white" style={{ backgroundColor: "black", color: "white" }}>
-                              <SelectValue placeholder="Select Grade" className="text-white" />
+                            <SelectTrigger className="bg-white border border-[#42474c] min-h-[40px] rounded-[2px] text-[16px] [&>svg]:text-gray-600">
+                              <SelectValue placeholder="Select Grade" />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#161b20] border border-[#42474c] text-white">
-                              <SelectItem value="K" className="text-white">Kindergarten</SelectItem>
-                              <SelectItem value="1st" className="text-white">1st</SelectItem>
-                              <SelectItem value="2nd" className="text-white">2nd</SelectItem>
-                              <SelectItem value="3rd" className="text-white">3rd</SelectItem>
-                              <SelectItem value="4th" className="text-white">4th</SelectItem>
-                              <SelectItem value="5th" className="text-white">5th</SelectItem>
-                              <SelectItem value="6th" className="text-white">6th</SelectItem>
-                              <SelectItem value="7th" className="text-white">7th</SelectItem>
-                              <SelectItem value="8th" className="text-white">8th</SelectItem>
-                              <SelectItem value="9th" className="text-white">9th</SelectItem>
-                              <SelectItem value="10th" className="text-white">10th</SelectItem>
-                              <SelectItem value="11th" className="text-white">11th</SelectItem>
-                              <SelectItem value="12th" className="text-white">12th</SelectItem>
+                            <SelectContent className="bg-white border border-[#42474c]">
+                              <SelectItem value="K">Kindergarten</SelectItem>
+                              <SelectItem value="1st">1st</SelectItem>
+                              <SelectItem value="2nd">2nd</SelectItem>
+                              <SelectItem value="3rd">3rd</SelectItem>
+                              <SelectItem value="4th">4th</SelectItem>
+                              <SelectItem value="5th">5th</SelectItem>
+                              <SelectItem value="6th">6th</SelectItem>
+                              <SelectItem value="7th">7th</SelectItem>
+                              <SelectItem value="8th">8th</SelectItem>
+                              <SelectItem value="9th">9th</SelectItem>
+                              <SelectItem value="10th">10th</SelectItem>
+                              <SelectItem value="11th">11th</SelectItem>
+                              <SelectItem value="12th">12th</SelectItem>
                             </SelectContent>
                           </Select>
                           <div className="flex gap-1 items-center justify-center relative shrink-0 w-full">
@@ -946,12 +1220,12 @@ export default function AddOrConnectAthletePage() {
                             <p className="relative shrink-0 text-[#ff563f]">*</p>
                           </div>
                           <Select value={graduationYear} onValueChange={setGraduationYear}>
-                            <SelectTrigger className="bg-black border border-[#42474c] min-h-[40px] rounded-[2px] text-[16px] text-white [&>svg]:text-white" style={{ backgroundColor: "black", color: "white" }}>
-                              <SelectValue placeholder="Select Year" className="text-white" />
+                            <SelectTrigger className="bg-white border border-[#42474c] min-h-[40px] rounded-[2px] text-[16px] [&>svg]:text-gray-600">
+                              <SelectValue placeholder="Select Year" />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#161b20] border border-[#42474c] text-white">
+                            <SelectContent className="bg-white border border-[#42474c]">
                               {Array.from({ length: 15 }, (_, i) => 2025 + i).map((year) => (
-                                <SelectItem key={year} value={year.toString()} className="text-white">
+                                <SelectItem key={year} value={year.toString()}>
                                   {year}
                                 </SelectItem>
                               ))}
@@ -979,14 +1253,7 @@ export default function AddOrConnectAthletePage() {
 
                     {/* Action Buttons */}
                     <div className="flex flex-col gap-3 items-start relative shrink-0 w-full">
-                      <button
-                        onClick={handleAddAnother}
-                        className="w-full bg-[#34363A] text-[#C4C4C4] hover:bg-[#3a3d41] rounded-[2px] h-10 px-4 flex items-center justify-center gap-2 transition-colors shadow-sm font-bold text-base"
-                      >
-                        <Plus className="size-4 text-[#C4C4C4]" />
-                        <span className="text-[#C4C4C4] font-bold">Add Another Athlete</span>
-                      </button>
-                      {version === "2" && (
+                      {version === "2" && !fromConnectedPage && (
                         <Button
                           variant="secondary"
                           size="lg"
@@ -1007,7 +1274,7 @@ export default function AddOrConnectAthletePage() {
                       >
                         Finish
                       </Button>
-                      {version !== "2" && (
+                      {version !== "2" && !fromConnectedPage && (
                         <Button
                           variant="ghost"
                           size="lg"
@@ -1062,136 +1329,6 @@ export default function AddOrConnectAthletePage() {
                       </Button>
                     </div>
                   </div>
-
-                  {/* Connection Request Cards (pending/expired only) - Only show when connectionRequests=true */}
-                  {showConnectionRequests && (() => {
-                    // Always show both cards - get from connectionAttempts or use defaults
-                    const janeCard1 = connectionAttempts.find(a => a.email.toLowerCase() === "jane.doe@hudl.com") || {
-                      id: "jane-doe-1",
-                      email: "jane.doe@hudl.com",
-                      name: "Jane Doe",
-                      status: "pending",
-                      requestedDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                    }
-                    const janeCard2 = connectionAttempts.find(a => a.email.toLowerCase() === "jane.doe@hudl.com") || {
-                      id: "jane-doe-2",
-                      email: "jane.doe@hudl.com",
-                      name: "Jane Doe",
-                      status: "pending",
-                      requestedDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                    }
-                    
-                    const firstRequest = janeCard1
-                    const secondRequest = janeCard2
-                    
-                    return (
-                      <div className="flex flex-col gap-2 items-start relative shrink-0 w-full mt-1">
-                        <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#c0c6cd] text-[16px] font-medium w-full mb-2">
-                          <p className="leading-[1.15]">Connection Requests</p>
-                        </div>
-                        
-                        {/* First Card - Always show */}
-                        {(() => {
-                          const statusBadge = getStatusBadge(firstRequest.status, firstRequest.email)
-                          return (
-                            <div className="bg-[#21262b] border border-[#42474c] flex flex-col gap-3 items-start px-4 py-3 relative rounded-[4px] shrink-0 w-full">
-                              <div className="flex gap-3 items-center relative shrink-0 w-full">
-                                <div className="basis-0 flex flex-col gap-1 grow items-start min-h-px min-w-px relative shrink-0">
-                                  <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#fefefe] text-[16px] w-full">
-                                    <p className="leading-[1.4]">{firstRequest.email}</p>
-                                  </div>
-                                  <button
-                                    onClick={() => handleResendAttempt(firstRequest.email)}
-                                    className="flex items-center gap-1 text-[#c0c6cd] hover:text-[#85909e] text-[14px] transition-colors mt-0.5"
-                                  >
-                                    Resend Code
-                                    <ArrowRight className="size-3" />
-                                  </button>
-                                </div>
-                                <div className="ml-auto flex gap-2 items-center justify-end relative shrink-0">
-                                  <button
-                                    onClick={() => {
-                                      setEmail(firstRequest.email)
-                                      setMode("connect")
-                                      setConnectStep("verification")
-                                    }}
-                                    className="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded hover:bg-[#2a2f35] hover:text-[#fefefe] transition-colors text-[#c0c6cd] text-[14px] justify-end"
-                                  >
-                                    <div className="flex flex-col justify-center leading-[0] relative shrink-0">
-                                      <p className="leading-[1.4]">Enter Code</p>
-                                    </div>
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })()}
-                        {/* Second Card - Expired State - Always show */}
-                        {(() => {
-                          const isExpired = secondRequest.email.toLowerCase() === "jane.doe@hudl.com"
-                          const statusBadge = getStatusBadge(secondRequest.status, secondRequest.email)
-                          const StatusIcon = statusBadge.icon
-                          return (
-                            <div
-                              key={secondRequest.id}
-                              className={`bg-[#21262b] border flex flex-col gap-3 items-start px-4 py-3 relative rounded-[4px] shrink-0 w-full ${
-                                isExpired 
-                                  ? "border-[#ff8c00]" 
-                                  : "border-[#42474c]"
-                              }`}
-                            >
-                              <div className="flex gap-3 items-center relative shrink-0 w-full">
-                                <div className="basis-0 flex flex-col gap-1 grow items-start min-h-px min-w-px relative shrink-0">
-                                  <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[#fefefe] text-[16px] w-full">
-                                    <p className="leading-[1.4]">{secondRequest.email}</p>
-                                  </div>
-                                  {isExpired && (
-                                    <button
-                                      onClick={() => handleResendAttempt(secondRequest.email)}
-                                      className="flex items-center gap-1 text-[#c0c6cd] hover:text-[#85909e] text-[14px] transition-colors mt-0.5"
-                                    >
-                                      Resend Code
-                                      <ArrowRight className="size-3" />
-                                    </button>
-                                  )}
-                                </div>
-                                <div className="ml-auto flex gap-2 items-center justify-end relative shrink-0">
-                                  {isExpired ? (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="flex items-center gap-2 cursor-help justify-end mr-3">
-                                          <StatusIcon className={`size-4 ${statusBadge.color}`} />
-                                          <div className="flex flex-col justify-center leading-[0] relative shrink-0 text-[14px]">
-                                            <p className={`leading-[1.4] ${statusBadge.color}`}>{statusBadge.text}</p>
-                                          </div>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Code expired-please resend</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  ) : (
-                                    <button
-                                      onClick={() => {
-                                        setEmail(secondRequest.email)
-                                        setMode("connect")
-                                        setConnectStep("verification")
-                                      }}
-                                      className="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded hover:bg-[#2a2f35] hover:text-[#fefefe] transition-colors text-[#c0c6cd] text-[14px] justify-end"
-                                    >
-                                      <div className="flex flex-col justify-center leading-[0] relative shrink-0">
-                                        <p className="leading-[1.4]">Enter Code</p>
-                                      </div>
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })()}
-                      </div>
-                    )
-                  })()}
                 </>
               )}
 
@@ -1283,62 +1420,40 @@ export default function AddOrConnectAthletePage() {
               {mode === "connect" && connectStep === "connected" && isConnected && (
                 <>
                   {/* Header Text */}
-                  <div className="flex flex-col gap-6 items-center leading-[0] relative shrink-0 text-center tracking-[0px] w-full font-medium">
+                  <div className="flex flex-col gap-6 items-center leading-[0] relative shrink-0 text-center tracking-[0px] w-full max-w-[400px] font-medium">
                     <div className="flex flex-col gap-1 items-center leading-[0] relative shrink-0 text-center tracking-[0px] w-full font-medium">
                       <div className="flex flex-col justify-center relative shrink-0 text-[#fefefe] text-[24px] w-full">
                         <p className="leading-[1.2]">Athlete Connected</p>
                       </div>
                       <div className="flex flex-col justify-center relative shrink-0 text-[#c0c6cd] text-[16px] w-full">
                         <p className="leading-[1.4]">
-                          You are now connected with
+                          You are now connected with your athlete. Finish filling out their information to register.
                         </p>
                       </div>
                     </div>
                     {connectedAthlete && connectedAthlete.name && (
-                      <div className="bg-[#21262b] flex gap-2 items-center pl-2 pr-4 py-2 relative rounded-[17px] shrink-0 w-full">
-                        <Avatar className="size-[40px] shrink-0">
-                          <AvatarFallback className="bg-[#38434f] text-white text-[14px] font-bold">
-                            {connectedAthlete.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="basis-0 flex flex-col gap-1 grow items-start justify-start min-h-px min-w-px relative shrink-0">
-                          <div className="flex items-center gap-2 relative shrink-0 w-full">
-                            <div className="flex flex-col justify-center leading-[0] overflow-ellipsis overflow-hidden relative shrink-0 text-[#fefefe] text-[16px] tracking-[0px] font-bold text-left">
+                      <div className="bg-[#21262b] flex flex-col gap-3 items-center pl-2 pr-4 py-3 relative rounded-[17px] shrink-0 w-full">
+                        <div className="flex gap-2 items-center relative shrink-0 w-full">
+                          <Avatar className="size-[40px] shrink-0">
+                            <AvatarImage src="/placeholder-user.jpg" alt={connectedAthlete.name} />
+                            <AvatarFallback className="bg-[#38434f] text-white text-[14px] font-bold">
+                              {connectedAthlete.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="basis-0 flex flex-col gap-1 grow items-start justify-start min-h-px min-w-px relative shrink-0">
+                            <div className="flex flex-col justify-center leading-[0] overflow-ellipsis overflow-hidden relative shrink-0 text-[#fefefe] text-[16px] tracking-[0px] font-bold text-left w-full">
                               <p className="leading-[1.2] overflow-ellipsis overflow-hidden text-[16px]">{connectedAthlete.name}</p>
                             </div>
-                            <button
-                              onClick={() => {
-                                // Store athlete name for pre-populating the form
-                                if (typeof window !== "undefined" && connectedAthlete) {
-                                  localStorage.setItem("addAthleteName", connectedAthlete.name)
-                                  // Split name into first and last name
-                                  const nameParts = connectedAthlete.name.trim().split(" ")
-                                  const firstName = nameParts[0] || ""
-                                  const lastName = nameParts.slice(1).join(" ") || ""
-                                  localStorage.setItem("addAthleteFirstName", firstName)
-                                  localStorage.setItem("addAthleteLastName", lastName)
-                                }
-                                setMode("add")
-                                // Clear the code and verification state
-                                setCode(["", "", "", "", "", ""])
-                                setIsConnected(false)
-                                setConnectStep("send-link")
-                              }}
-                              className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-[#2a2f35] transition-colors shrink-0 mt-1"
-                            >
-                              <AlertTriangle className="size-3.5 text-[#ff8c00]" />
-                              <p className="text-[#ff8c00] text-[12px] leading-[1.4] font-medium">Registration information needed</p>
-                            </button>
-                          </div>
-                          <div className="flex font-medium gap-1 items-start leading-[0] relative shrink-0 text-[#c0c6cd] text-[14px] tracking-[0px] w-full text-left">
-                            <div className="flex-col justify-center overflow-ellipsis overflow-hidden relative shrink-0">
-                              <p className="leading-[1.4] text-[14px]">MD</p>
-                            </div>
-                            <div className="flex-col justify-center overflow-ellipsis overflow-hidden relative shrink-0 text-center">
-                              <p className="leading-[1.4] text-[14px]">·</p>
-                            </div>
-                            <div className="flex-col justify-center overflow-ellipsis overflow-hidden relative shrink-0">
-                              <p className="leading-[1.4] text-[14px]">Wichita FC</p>
+                            <div className="flex font-medium gap-1 items-start leading-[0] relative shrink-0 text-[#c0c6cd] text-[14px] tracking-[0px] w-full text-left">
+                              <div className="flex-col justify-center overflow-ellipsis overflow-hidden relative shrink-0">
+                                <p className="leading-[1.4] text-[14px]">MD</p>
+                              </div>
+                              <div className="flex-col justify-center overflow-ellipsis overflow-hidden relative shrink-0 text-center">
+                                <p className="leading-[1.4] text-[14px]">·</p>
+                              </div>
+                              <div className="flex-col justify-center overflow-ellipsis overflow-hidden relative shrink-0">
+                                <p className="leading-[1.4] text-[14px]">Wichita FC</p>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1353,9 +1468,29 @@ export default function AddOrConnectAthletePage() {
                         variant="default" 
                         size="lg" 
                         className="w-full"
-                        onClick={handleVerify}
+                        onClick={() => {
+                          // Store athlete name for pre-populating the form
+                          if (typeof window !== "undefined" && connectedAthlete) {
+                            localStorage.setItem("addAthleteName", connectedAthlete.name)
+                            // Split name into first and last name
+                            const nameParts = connectedAthlete.name.trim().split(" ")
+                            const firstName = nameParts[0] || ""
+                            const lastName = nameParts.slice(1).join(" ") || ""
+                            localStorage.setItem("addAthleteFirstName", firstName)
+                            localStorage.setItem("addAthleteLastName", lastName)
+                            // Set flag to indicate coming from connected page
+                            localStorage.setItem("fromConnectedPage", "true")
+                            setFromConnectedPage(true)
+                          }
+                          setMode("add")
+                          // Clear the code and verification state
+                          setCode(["", "", "", "", "", ""])
+                          setIsConnected(false)
+                          setConnectStep("send-link")
+                        }}
                       >
-                        Finish
+                        Complete Athlete Profile
+                        <ArrowRight className="size-4 ml-2" />
                       </Button>
                     </div>
                     <Button 
@@ -1380,8 +1515,12 @@ export default function AddOrConnectAthletePage() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={handleBack}
-            className="bg-[#2a2f35] text-[#c0c6cd] hover:bg-[#343a40] hover:text-[#fefefe] border-0"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleBack()
+            }}
+            className="bg-[#2a2f35] text-[#c0c6cd] hover:bg-[#343a40] hover:text-[#fefefe] border-0 cursor-pointer"
           >
             <ArrowLeft className="size-4 mr-2" />
             Back
