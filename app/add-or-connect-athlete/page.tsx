@@ -93,20 +93,8 @@ export default function AddOrConnectAthletePage() {
         return version === "2" ? "add" : "selection"
       }
       
-      // Check if authenticated (skip auth if already done)
-      const authenticated = localStorage.getItem("isAuthenticated") === "true"
-      if (authenticated) {
-        // Check if mode is specified in URL
-        const urlMode = urlParams.get("mode")
-        if (urlMode === "add") {
-          return "add"
-        }
-        const saved = localStorage.getItem("addOrConnectMode")
-        if (saved && (saved === "selection" || saved === "add" || saved === "connect")) {
-          return saved as PageMode
-        }
-        return version === "2" ? "add" : "selection"
-      }
+      // For public link (no from=program), always show auth page
+      // Don't check authentication - always start at create account
     }
     // Default to auth as the first step
     return "auth"
