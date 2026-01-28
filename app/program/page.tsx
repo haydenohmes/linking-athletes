@@ -188,12 +188,21 @@ export default function ProgramPage() {
   // Load athletes on mount and handle refresh detection
   React.useEffect(() => {
     if (typeof window !== "undefined") {
-      // Check if athlete was just added (from add flow)
+      // Check if athlete was just added (from add flow) - check this FIRST before any other logic
       const athleteJustAdded = localStorage.getItem("athleteJustAdded") === "true"
       const storedAthletes = localStorage.getItem("completedAthletes")
       
       console.log("Program page loaded - athleteJustAdded:", athleteJustAdded)
       console.log("Stored athletes:", storedAthletes)
+      
+      // If athlete was just added, always load and keep athletes (don't clear)
+      if (athleteJustAdded) {
+        console.log("Athlete just added - loading and keeping athletes")
+        loadCompletedAthletes()
+        // Clear the flag after loading
+        localStorage.removeItem("athleteJustAdded")
+        return // Exit early - don't check for refresh
+      }
       
       // Check if this is a page refresh (not client-side navigation)
       let isRefresh = false
@@ -216,24 +225,17 @@ export default function ProgramPage() {
         console.log("Could not detect navigation type, assuming navigation")
       }
       
-      // Always load athletes first
-      loadCompletedAthletes()
-      
-      // Only clear on refresh if no athlete was just added
-      if (isRefresh && !athleteJustAdded) {
-        console.log("Clearing athletes - refresh detected and no athlete just added")
+      if (isRefresh) {
+        console.log("Clearing athletes - refresh detected")
         // Clear athletes on refresh for clean starting point
         localStorage.removeItem("completedAthletes")
         localStorage.removeItem("newlyConnectedAthlete")
         setCompletedAthletes([])
         setNewlyConnectedAthlete(null)
       } else {
-        console.log("Keeping athletes - isRefresh:", isRefresh, "athleteJustAdded:", athleteJustAdded)
-      }
-      
-      // Clear the flag after checking
-      if (athleteJustAdded) {
-        localStorage.removeItem("athleteJustAdded")
+        console.log("Loading athletes - navigation detected")
+        // Load athletes when navigating (not refresh)
+        loadCompletedAthletes()
       }
     }
   }, [loadCompletedAthletes])
@@ -242,7 +244,15 @@ export default function ProgramPage() {
   React.useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        loadCompletedAthletes()
+        // Check if athlete was just added
+        const athleteJustAdded = localStorage.getItem("athleteJustAdded") === "true"
+        if (athleteJustAdded) {
+          console.log("Page visible - athlete just added, reloading athletes")
+          loadCompletedAthletes()
+          localStorage.removeItem("athleteJustAdded")
+        } else {
+          loadCompletedAthletes()
+        }
       }
     }
     document.addEventListener("visibilitychange", handleVisibilityChange)
@@ -250,6 +260,20 @@ export default function ProgramPage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
   }, [loadCompletedAthletes])
+  
+  // Also reload athletes when searchParams change (navigation with query params)
+  React.useEffect(() => {
+    // Small delay to ensure localStorage is updated
+    const timer = setTimeout(() => {
+      const athleteJustAdded = localStorage.getItem("athleteJustAdded") === "true"
+      if (athleteJustAdded) {
+        console.log("Search params changed - athlete just added, reloading athletes")
+        loadCompletedAthletes()
+        localStorage.removeItem("athleteJustAdded")
+      }
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [searchParams, loadCompletedAthletes])
 
   React.useEffect(() => {
     loadCompletedAthletes()

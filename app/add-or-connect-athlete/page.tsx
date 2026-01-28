@@ -825,8 +825,47 @@ export default function AddOrConnectAthletePage() {
         position: "bottom-right",
       })
     } else if (isConnected && connectStep === "connected") {
-      // Store newly connected athlete for program page display
-      if (typeof window !== "undefined" && connectedAthlete) {
+      // Add connected athlete to completedAthletes so banner hides
+      if (typeof window !== "undefined" && connectedAthlete && connectedAthlete.name) {
+        // Parse name to get first and last name
+        const nameParts = connectedAthlete.name.trim().split(" ")
+        const firstName = nameParts[0] || ""
+        const lastName = nameParts.slice(1).join(" ") || ""
+        
+        const athleteData = {
+          id: `athlete-${Date.now()}`,
+          name: connectedAthlete.name,
+          firstName: firstName,
+          lastName: lastName,
+          completedAt: new Date().toISOString()
+        }
+        
+        // Get existing athletes
+        const existingAthletes = localStorage.getItem("completedAthletes")
+        let athletes: Array<typeof athleteData> = []
+        if (existingAthletes) {
+          try {
+            athletes = JSON.parse(existingAthletes)
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+        
+        // Add new athlete (avoid duplicates by checking name)
+        const existingIndex = athletes.findIndex(a => 
+          a.firstName === firstName && a.lastName === lastName
+        )
+        if (existingIndex >= 0) {
+          athletes[existingIndex] = athleteData
+        } else {
+          athletes.push(athleteData)
+        }
+        
+        // Save to completedAthletes
+        localStorage.setItem("completedAthletes", JSON.stringify(athletes))
+        localStorage.setItem("athleteJustAdded", "true")
+        
+        // Also store as newly connected for display purposes
         localStorage.setItem("newlyConnectedAthlete", JSON.stringify({
           ...connectedAthlete,
           isNew: true,
