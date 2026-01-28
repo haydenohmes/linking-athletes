@@ -310,24 +310,12 @@ export default function AddOrConnectAthletePage() {
 
   // Load connection attempts from localStorage
   React.useEffect(() => {
-    const stored = localStorage.getItem("connectionAttempts")
-    let attempts: Array<{id: string, email: string, name: string, status: string, requestedDate: string}> = []
-    
-    if (stored) {
-      try {
-        attempts = JSON.parse(stored)
-      } catch (e) {
-        console.error("Failed to load connection attempts", e)
-      }
+    // Clear connection attempts (for testing - remove athletes you just sent codes to)
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("connectionAttempts")
     }
     
-    // Remove old entries we don't want
-    attempts = attempts.filter(a => 
-      a.email.toLowerCase() !== "hayden.ohmes@hudl.com" &&
-      a.email.toLowerCase() !== "kiersten.ohmes@example.com" &&
-      a.email.toLowerCase() !== "jane.doe@example.com" &&
-      a.email.toLowerCase() !== "expired.user@example.com"
-    )
+    let attempts: Array<{id: string, email: string, name: string, status: string, requestedDate: string}> = []
     
     // Add default connected athletes for version 1
     const defaultAthletes = [
@@ -347,15 +335,8 @@ export default function AddOrConnectAthletePage() {
       }
     ]
     
-    // Always ensure john.doe@hudl.com is first, jane.doe@hudl.com is second
-    // Remove any existing entries for these emails from stored attempts
-    const filteredAttempts = attempts.filter(a => 
-      a.email.toLowerCase() !== "john.doe@hudl.com" && 
-      a.email.toLowerCase() !== "jane.doe@hudl.com"
-    )
-    
     // Put default athletes first in the correct order, then other attempts
-    const allAttempts = [...defaultAthletes, ...filteredAttempts]
+    const allAttempts = [...defaultAthletes, ...attempts]
     
     // Save to localStorage to persist
     if (typeof window !== "undefined") {
@@ -486,6 +467,10 @@ export default function AddOrConnectAthletePage() {
   }
 
   const handleBack = () => {
+    // Check if we came from program page
+    const fromProgram = searchParams.get("from") === "program" || 
+                       (typeof window !== "undefined" && localStorage.getItem("fromProgram") === "true")
+    
     // Check if we're on verification step
     if (connectStep === "verification") {
       if (typeof window !== "undefined") {
@@ -496,11 +481,30 @@ export default function AddOrConnectAthletePage() {
     }
     
     if (mode === "auth") {
-      // From auth screen, this is the root - don't go back further
-      // Stay on auth page (create account is the starting point)
+      // From auth screen, if we came from program, go back to program
+      if (fromProgram) {
+        const params = new URLSearchParams()
+        if (version !== "1") params.set("version", version)
+        if (displayMode === "avatars") params.set("display", "avatars")
+        if (showConnectionRequests) params.set("connectionRequests", "true")
+        const queryString = params.toString() ? `?${params.toString()}` : ""
+        router.push(`/program${queryString}`)
+        return
+      }
+      // Otherwise, this is the root - don't go back further
       return
     } else if (mode === "selection") {
-      // From selection screen, go back to auth (create account page)
+      // From selection screen, if we came from program, go back to program
+      if (fromProgram) {
+        const params = new URLSearchParams()
+        if (version !== "1") params.set("version", version)
+        if (displayMode === "avatars") params.set("display", "avatars")
+        if (showConnectionRequests) params.set("connectionRequests", "true")
+        const queryString = params.toString() ? `?${params.toString()}` : ""
+        router.push(`/program${queryString}`)
+        return
+      }
+      // Otherwise, go back to auth (create account page)
       setMode("auth")
       // Clear authentication so they can see the auth screen
       if (typeof window !== "undefined") {
@@ -508,12 +512,32 @@ export default function AddOrConnectAthletePage() {
       }
     } else if (mode === "connect") {
       if (connectStep === "send-link") {
-        handleBackToSelection()
+        // If from program, go back to program, otherwise go to selection
+        if (fromProgram) {
+          const params = new URLSearchParams()
+          if (version !== "1") params.set("version", version)
+          if (displayMode === "avatars") params.set("display", "avatars")
+          if (showConnectionRequests) params.set("connectionRequests", "true")
+          const queryString = params.toString() ? `?${params.toString()}` : ""
+          router.push(`/program${queryString}`)
+        } else {
+          handleBackToSelection()
+        }
       } else if (connectStep === "connected") {
         handleBackToSelection()
       }
     } else if (mode === "add") {
-      handleBackToSelection()
+      // If from program, go back to program, otherwise go to selection
+      if (fromProgram) {
+        const params = new URLSearchParams()
+        if (version !== "1") params.set("version", version)
+        if (displayMode === "avatars") params.set("display", "avatars")
+        if (showConnectionRequests) params.set("connectionRequests", "true")
+        const queryString = params.toString() ? `?${params.toString()}` : ""
+        router.push(`/program${queryString}`)
+      } else {
+        handleBackToSelection()
+      }
     }
   }
 
@@ -565,7 +589,13 @@ export default function AddOrConnectAthletePage() {
         athletes.push(athleteData)
       }
       
+      // Save athletes and set flag BEFORE navigation
       localStorage.setItem("completedAthletes", JSON.stringify(athletes))
+      localStorage.setItem("athleteJustAdded", "true")
+      
+      // Verify it was saved
+      console.log("Athlete saved:", athleteData)
+      console.log("All athletes:", athletes)
     }
     
     // Clear localStorage state when finishing
@@ -580,6 +610,7 @@ export default function AddOrConnectAthletePage() {
       localStorage.removeItem("addAthleteName")
       localStorage.removeItem("addAthleteFirstName")
       localStorage.removeItem("addAthleteLastName")
+      localStorage.removeItem("fromProgram")
       setFromConnectedPage(false)
     }
     const params = new URLSearchParams()

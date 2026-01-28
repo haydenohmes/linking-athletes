@@ -141,27 +141,12 @@ export default function ProgramPage() {
   const [email, setEmail] = React.useState("")
   const [connectionAttempts, setConnectionAttempts] = React.useState<Array<{id: string, email: string, name: string, status: string, requestedDate: string}>>([])
   const [completedAthletes, setCompletedAthletes] = React.useState<Array<{id: string, name: string, firstName: string, lastName: string}>>([])
-  const [newlyConnectedAthlete, setNewlyConnectedAthlete] = React.useState<{name: string, email: string, isNew: boolean} | null>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("newlyConnectedAthlete")
-      if (stored) {
-        try {
-          const athlete = JSON.parse(stored)
-          // Clear it after reading so it only shows once
-          localStorage.removeItem("newlyConnectedAthlete")
-          return athlete
-        } catch (e) {
-          return null
-        }
-      }
-    }
-    return null
-  })
+  const [newlyConnectedAthlete, setNewlyConnectedAthlete] = React.useState<{name: string, email: string, isNew: boolean} | null>(null)
 
   // Load completed athletes from localStorage
   const loadCompletedAthletes = React.useCallback(() => {
     if (typeof window !== "undefined") {
-      // Load completed athletes from localStorage
+      // Always load athletes first
       const stored = localStorage.getItem("completedAthletes")
       if (stored) {
         try {
@@ -175,8 +160,6 @@ export default function ProgramPage() {
                    !(firstName === "hayden" && lastName === "ohmes")
           })
           setCompletedAthletes(filteredAthletes)
-          // Update localStorage with filtered athletes
-          localStorage.setItem("completedAthletes", JSON.stringify(filteredAthletes))
         } catch (e) {
           console.error("Failed to load completed athletes", e)
           setCompletedAthletes([])
@@ -184,13 +167,77 @@ export default function ProgramPage() {
       } else {
         setCompletedAthletes([])
       }
+      
+      // Load newly connected athlete
+      const newlyConnected = localStorage.getItem("newlyConnectedAthlete")
+      if (newlyConnected) {
+        try {
+          const athlete = JSON.parse(newlyConnected)
+          setNewlyConnectedAthlete(athlete)
+          // Clear it after reading so it only shows once
+          localStorage.removeItem("newlyConnectedAthlete")
+        } catch (e) {
+          setNewlyConnectedAthlete(null)
+        }
+      } else {
+        setNewlyConnectedAthlete(null)
+      }
     }
   }, [])
 
+  // Load athletes on mount and handle refresh detection
   React.useEffect(() => {
-    loadCompletedAthletes()
+    if (typeof window !== "undefined") {
+      // Check if athlete was just added (from add flow)
+      const athleteJustAdded = localStorage.getItem("athleteJustAdded") === "true"
+      const storedAthletes = localStorage.getItem("completedAthletes")
+      
+      console.log("Program page loaded - athleteJustAdded:", athleteJustAdded)
+      console.log("Stored athletes:", storedAthletes)
+      
+      // Check if this is a page refresh (not client-side navigation)
+      let isRefresh = false
+      try {
+        const navTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
+        if (navTiming) {
+          // 'reload' means user pressed F5 or refresh button
+          // 'navigate' means client-side navigation (router.push)
+          isRefresh = navTiming.type === 'reload'
+          console.log("Navigation type:", navTiming.type, "isRefresh:", isRefresh)
+        } else if ((performance as any).navigation) {
+          // Fallback for older browsers
+          // type 1 = TYPE_RELOAD
+          isRefresh = (performance as any).navigation.type === 1
+          console.log("Navigation type (fallback):", (performance as any).navigation.type, "isRefresh:", isRefresh)
+        }
+      } catch (e) {
+        // If we can't detect, assume it's navigation (safer - preserves athletes)
+        isRefresh = false
+        console.log("Could not detect navigation type, assuming navigation")
+      }
+      
+      // Always load athletes first
+      loadCompletedAthletes()
+      
+      // Only clear on refresh if no athlete was just added
+      if (isRefresh && !athleteJustAdded) {
+        console.log("Clearing athletes - refresh detected and no athlete just added")
+        // Clear athletes on refresh for clean starting point
+        localStorage.removeItem("completedAthletes")
+        localStorage.removeItem("newlyConnectedAthlete")
+        setCompletedAthletes([])
+        setNewlyConnectedAthlete(null)
+      } else {
+        console.log("Keeping athletes - isRefresh:", isRefresh, "athleteJustAdded:", athleteJustAdded)
+      }
+      
+      // Clear the flag after checking
+      if (athleteJustAdded) {
+        localStorage.removeItem("athleteJustAdded")
+      }
+    }
   }, [loadCompletedAthletes])
-
+  
   // Reload athletes when page becomes visible (e.g., when navigating back from add athlete flow)
   React.useEffect(() => {
     const handleVisibilityChange = () => {
@@ -204,28 +251,20 @@ export default function ProgramPage() {
     }
   }, [loadCompletedAthletes])
 
+  React.useEffect(() => {
+    loadCompletedAthletes()
+  }, [loadCompletedAthletes])
+
+  // Note: We removed the visibility change handler since we want to clear athletes only on refresh
+  // This ensures a clean starting point for testing when refreshing the program page
+
   // Load connection attempts from localStorage
   React.useEffect(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("connectionAttempts")
+      // Clear connection attempts (for testing - remove athletes you just sent codes to)
+      localStorage.removeItem("connectionAttempts")
+      
       let attempts: Array<{id: string, email: string, name: string, status: string, requestedDate: string}> = []
-      
-      if (stored) {
-        try {
-          attempts = JSON.parse(stored)
-        } catch (e) {
-          console.error("Failed to load connection attempts", e)
-        }
-      }
-      
-      // Remove old entries we don't want
-      attempts = attempts.filter(a => 
-        a && a.email && typeof a.email === "string" &&
-        a.email.toLowerCase() !== "hayden.ohmes@hudl.com" &&
-        a.email.toLowerCase() !== "kiersten.ohmes@example.com" &&
-        a.email.toLowerCase() !== "jane.doe@example.com" &&
-        a.email.toLowerCase() !== "expired.user@example.com"
-      )
       
       // Add default connection requests for connectionRequests version
       if (showConnectionRequests) {
@@ -246,17 +285,7 @@ export default function ProgramPage() {
           }
         ]
         
-        // Remove any existing entries for these emails from stored attempts
-        const filteredAttempts = attempts.filter(a => 
-          a && a.email && typeof a.email === "string" &&
-          a.email.toLowerCase() !== "john.doe@hudl.com" && 
-          a.email.toLowerCase() !== "jane.doe@hudl.com"
-        )
-        
-        // Put default athletes first in the correct order, then other attempts
-        const allAttempts = [...defaultAthletes, ...filteredAttempts]
-        
-        setConnectionAttempts(allAttempts)
+        setConnectionAttempts(defaultAthletes)
       } else {
         setConnectionAttempts(attempts)
       }
@@ -556,6 +585,12 @@ export default function ProgramPage() {
                       if (displayMode === "avatars") params.set("display", "avatars")
                       if (showConnectionRequests) params.set("connectionRequests", "true")
                       params.set("from", "program")
+                      // Ensure user is authenticated when coming from program page
+                      // Store flag so back button knows to return to program page
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("isAuthenticated", "true")
+                        localStorage.setItem("fromProgram", "true")
+                      }
                       const queryString = params.toString() ? `?${params.toString()}` : ""
                       router.push(`/add-or-connect-athlete${queryString}`)
                     }}
@@ -635,6 +670,12 @@ export default function ProgramPage() {
                             if (displayMode === "avatars") params.set("display", "avatars")
                             if (showConnectionRequests) params.set("connectionRequests", "true")
                             params.set("from", "program")
+                            // Ensure user is authenticated when coming from program page
+                            // Store flag so back button knows to return to program page
+                            if (typeof window !== "undefined") {
+                              localStorage.setItem("isAuthenticated", "true")
+                              localStorage.setItem("fromProgram", "true")
+                            }
                             const queryString = params.toString() ? `?${params.toString()}` : ""
                             router.push(`/add-or-connect-athlete${queryString}`)
                           }}
@@ -718,6 +759,12 @@ export default function ProgramPage() {
                             if (displayMode === "avatars") params.set("display", "avatars")
                             if (showConnectionRequests) params.set("connectionRequests", "true")
                             params.set("from", "program")
+                            // Ensure user is authenticated when coming from program page
+                            // Store flag so back button knows to return to program page
+                            if (typeof window !== "undefined") {
+                              localStorage.setItem("isAuthenticated", "true")
+                              localStorage.setItem("fromProgram", "true")
+                            }
                             const queryString = params.toString() ? `?${params.toString()}` : ""
                             router.push(`/add-or-connect-athlete${queryString}`)
                           }}
@@ -801,6 +848,12 @@ export default function ProgramPage() {
                             if (displayMode === "avatars") params.set("display", "avatars")
                             if (showConnectionRequests) params.set("connectionRequests", "true")
                             params.set("from", "program")
+                            // Ensure user is authenticated when coming from program page
+                            // Store flag so back button knows to return to program page
+                            if (typeof window !== "undefined") {
+                              localStorage.setItem("isAuthenticated", "true")
+                              localStorage.setItem("fromProgram", "true")
+                            }
                             const queryString = params.toString() ? `?${params.toString()}` : ""
                             router.push(`/add-or-connect-athlete${queryString}`)
                           }}
